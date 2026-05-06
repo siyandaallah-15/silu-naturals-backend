@@ -416,6 +416,7 @@ html { scroll-behavior:smooth; }
     <a href="#join">Join</a>
     <a href="#commission">Commission</a>
     <a href="#portal">Portal</a>
+    <a href="#admin-panel" onclick="openModal('admin-login')" style="color:var(--yellow);">Admin</a>
   </div>
   <button class="nav-btn" onclick="openModal('login')">Distributor Login</button>
 </nav>
@@ -982,8 +983,17 @@ html { scroll-behavior:smooth; }
   <div class="section-inner">
     <div class="section-tag">Administration</div>
     <div class="section-title">Admin Panel</div>
-    <p style="color:var(--gray);margin-bottom:8px;">Business owner and manager access. <button class="link-btn" onclick="openModal('admin-login')">Admin Login →</button></p>
+    <p style="color:var(--gray);margin-bottom:16px;">
+  Business owner and manager access only.
+  &nbsp;
+  <span id="admin-login-btn"><button class="link-btn" onclick="openModal('admin-login')">Admin Login →</button></span>
+</p>
     <div id="admin-area" style="display:none;">
+      <!-- Admin top bar with logout -->
+      <div style="display:flex;justify-content:space-between;align-items:center;background:var(--black);padding:12px 20px;margin-bottom:0;border-radius:4px 4px 0 0;">
+        <div style="color:var(--yellow);font-weight:700;font-size:.88rem;letter-spacing:.5px;">🔐 ADMIN PANEL — You are logged in</div>
+        <button onclick="doAdminLogout()" style="background:#c62828;color:#fff;border:none;padding:8px 18px;font-family:'Outfit',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:background .2s;" onmouseover="this.style.background='#b71c1c'" onmouseout="this.style.background='#c62828'">⏏ Log Out</button>
+      </div>
       <div class="admin-tabs">
         <button class="admin-tab active" onclick="switchAdmin('dist',this)">Distributors (<span id="admin-dist-count">0</span>)</button>
         <button class="admin-tab" onclick="switchAdmin('payouts',this)">Payout Requests</button>
@@ -1672,8 +1682,8 @@ html { scroll-behavior:smooth; }
     <h2>Admin Login</h2>
     <p class="sub">Business owner and manager access only.</p>
     <div id="admin-login-msg" class="form-msg"></div>
-    <div class="form-group"><label>Username</label><input type="text" id="admin-user" placeholder="admin"></div>
-    <div class="form-group"><label>Password</label><input type="password" id="admin-pass" placeholder="••••••••"></div>
+    <div class="form-group"><label>Username</label><input type="text" id="admin-user" placeholder="admin" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="admin-pass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
     <button class="submit-btn" onclick="doAdminLogin()">Login as Admin</button>
   </div>
 </div>
@@ -2956,16 +2966,41 @@ function doAdminLogin() {
   const pass = document.getElementById('admin-pass').value;
   const msg  = document.getElementById('admin-login-msg');
   if ((user==='admin'||user==='owner') && pass==='admin123') {
-    showMsg(msg,'success','Admin access granted!');
+    showMsg(msg,'success','Admin access granted! Opening panel...');
     setTimeout(() => {
       closeModal('admin-login');
+      // Show the admin area and load data
+      const adminArea = document.getElementById('admin-area');
+      adminArea.style.display = 'block';
       loadAdminPanel();
-      document.getElementById('admin-area').style.display = 'block';
-      document.getElementById('admin-panel').scrollIntoView({ behavior:'smooth' });
-    }, 800);
+      renderAdminMaintenance();
+      // Scroll to admin panel
+      setTimeout(() => {
+        document.getElementById('admin-panel').scrollIntoView({ behavior:'smooth' });
+      }, 100);
+      // Update login button to show logout
+      updateAdminLoginBtn(true);
+    }, 600);
   } else {
-    showMsg(msg,'error','Invalid credentials. (Demo: admin / admin123)');
+    showMsg(msg,'error','Incorrect credentials. Try: admin / admin123');
   }
+}
+
+function updateAdminLoginBtn(loggedIn) {
+  const btnEl = document.getElementById('admin-login-btn');
+  if (!btnEl) return;
+  if (loggedIn) {
+    btnEl.innerHTML = '✅ Admin Logged In &nbsp;<button class="link-btn" onclick="doAdminLogout()" style="color:#c62828;font-size:.82rem;">Log Out</button>';
+  } else {
+    btnEl.innerHTML = '<button class="link-btn" onclick="openModal(\'admin-login\')">Admin Login →</button>';
+  }
+}
+
+function doAdminLogout() {
+  document.getElementById('admin-area').style.display = 'none';
+  updateAdminLoginBtn(false);
+  // Scroll back up to admin panel top
+  document.getElementById('admin-panel').scrollIntoView({ behavior:'smooth' });
 }
 
 function loadAdminPanel() {
