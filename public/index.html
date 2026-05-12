@@ -409,6 +409,7 @@ html { scroll-behavior:smooth; }
 .admin-maint-row { background:#fff8f8; }
 .admin-grace-row { background:#fff8e1; }
 </style>
+  <script src="https://js.paystack.co/v1/inline.js"></script>
 </head>
 <body>
 
@@ -1469,7 +1470,7 @@ html { scroll-behavior:smooth; }
       </div>
 
       <!-- ── CARD PANEL ── -->
-      <div id="panel-card">
+      <div id="panel-card" style="display:none;">
         <!-- Card brand SVG logos -->
         <div style="margin-bottom:16px;">
           <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:8px;">Accepted Cards</div>
@@ -1562,7 +1563,7 @@ html { scroll-behavior:smooth; }
       </div>
 
       <!-- ── VIRTUAL CARD PANEL ── -->
-      <div id="panel-virtual" style="display:none;">
+      <div id="panel-virtual" style="display:none;" style="display:none;">
         <div style="background:linear-gradient(135deg,#e8f0ff,#f0f7ff);border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:.83rem;color:#1a3a6e;line-height:1.7;border:1px solid #c8deff;">
           <strong style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a73e8" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
@@ -1627,7 +1628,7 @@ html { scroll-behavior:smooth; }
       </div>
 
       <!-- ── DIGITAL WALLET PANEL ── -->
-      <div id="panel-wallet" style="display:none;">
+      <div id="panel-wallet" style="display:none;" style="display:none;">
         <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:10px;">Choose Your Wallet</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
 
@@ -1712,7 +1713,7 @@ html { scroll-behavior:smooth; }
 
       <div style="display:flex;gap:12px;">
         <button class="btn-outline" style="flex:1;" onclick="backToOrder()">← Back</button>
-        <button class="submit-btn" style="flex:2;" id="pay-now-btn" onclick="processPayment()">🔒 Pay Now</button>
+        <button class="submit-btn" style="flex:2;" id="pay-now-btn" onclick="processPayment()">🔒 Pay Securely with Paystack</button>
       </div>
     </div>
 
@@ -2823,49 +2824,78 @@ function formatVCard(input) {
   input.value = v.replace(/(\d{4})(?=\d)/g, '$1  ');
 }
 
+// ── PAYSTACK CONFIGURATION ────────────────────────────────
+var PAYSTACK_PUBLIC_KEY = 'pk_live_3c7f38304eb7571d722cda00d9fdd90314530706';
+
 function processPayment() {
-  const msg = document.getElementById('pay-msg');
+  var msg   = document.getElementById('pay-msg');
+  var name  = document.getElementById('order-name')  ? document.getElementById('order-name').value.trim()  : '';
+  var email = document.getElementById('order-email') ? document.getElementById('order-email').value.trim() : '';
+  var phone = document.getElementById('order-phone') ? document.getElementById('order-phone').value.trim() : '';
 
-  if (_activePayMethod === 'card') {
-    const cardNum  = document.getElementById('card-number').value.replace(/\s/g,'');
-    const cardName = document.getElementById('card-name').value.trim();
-    const expiry   = document.getElementById('card-expiry').value.trim();
-    const cvv      = document.getElementById('card-cvv').value.trim();
-    if (cardNum.length < 16) { showMsg(msg,'error','Please enter a valid 16-digit card number.'); return; }
-    if (!cardName)           { showMsg(msg,'error','Please enter the cardholder name.'); return; }
-    if (expiry.length < 7)   { showMsg(msg,'error','Please enter a valid expiry date (MM / YY).'); return; }
-    if (cvv.length < 3)      { showMsg(msg,'error','Please enter your CVV.'); return; }
-    const parts = expiry.replace(/\s/g,'').split('/');
-    const expMonth = parseInt(parts[0]), expYear = parseInt('20' + parts[1]);
-    const now = new Date();
-    if (expYear < now.getFullYear() || (expYear === now.getFullYear() && expMonth < now.getMonth()+1)) {
-      showMsg(msg,'error','Your card has expired. Please use a valid card.'); return;
+  if (!name)  { showMsg(msg,'error','Please enter your full name.');  return; }
+  if (!email) { showMsg(msg,'error','Please enter your email address.'); return; }
+  if (!phone) { showMsg(msg,'error','Please enter your phone number.'); return; }
+
+  // Get total amount (in kobo/cents — Paystack uses smallest currency unit)
+  var totalEl = document.getElementById('pay-total');
+  var totalText = totalEl ? totalEl.textContent.replace(/[^0-9]/g,'') : '0';
+  var totalRands = parseInt(totalText) || 0;
+  if (totalRands <= 0) {
+    // Try override total
+    if (window._distShopOverrideTotal) totalRands = window._distShopOverrideTotal.total;
+    if (window._regPackPrice) totalRands = parseInt(window._regPackPrice);
+  }
+  var totalKobo = totalRands * 100; // Paystack uses kobo (1 Rand = 100 kobo)
+
+  // Build order reference
+  var orderRef = window._pendingOrderNo || ('SN' + Date.now());
+
+  // Launch Paystack popup
+  var handler = PaystackPop.setup({
+    key:       PAYSTACK_PUBLIC_KEY,
+    email:     email,
+    amount:    totalKobo,
+    currency:  'ZAR',
+    ref:       orderRef,
+    firstname: name.split(' ')[0] || name,
+    lastname:  name.split(' ').slice(1).join(' ') || '',
+    phone:     phone,
+    metadata: {
+      custom_fields: [
+        { display_name: 'Customer Name',  variable_name: 'customer_name',  value: name },
+        { display_name: 'Phone',          variable_name: 'phone',          value: phone },
+        { display_name: 'Order Ref',      variable_name: 'order_ref',      value: orderRef },
+        { display_name: 'Product',        variable_name: 'product',        value: document.getElementById('order-product') ? document.getElementById('order-product').value : '' }
+      ]
+    },
+    callback: function(response) {
+      // Payment successful — response.reference is the Paystack transaction ref
+      paystackSuccess(response.reference, orderRef, totalRands);
+    },
+    onClose: function() {
+      showMsg(msg, 'error', 'Payment window closed. Click Pay Now to try again.');
     }
-    go3DS();
+  });
+  handler.openIframe();
+}
 
-  } else if (_activePayMethod === 'virtual') {
-    const vNum    = document.getElementById('vcard-number').value.replace(/\s/g,'');
-    const vName   = document.getElementById('vcard-name').value.trim();
-    const vExpiry = document.getElementById('vcard-expiry').value.trim();
-    const vCvv    = document.getElementById('vcard-cvv').value.trim();
-    if (vNum.length < 16)  { showMsg(msg,'error','Please enter your 16-digit virtual card number.'); return; }
-    if (!vName)            { showMsg(msg,'error','Please enter the cardholder name.'); return; }
-    if (vExpiry.length < 7){ showMsg(msg,'error','Please enter the expiry date.'); return; }
-    if (vCvv.length < 3)   { showMsg(msg,'error','Please enter your CVV.'); return; }
-    go3DS();
+function paystackSuccess(paystackRef, orderRef, amount) {
+  // Mark order as paid in localStorage
+  window._paystackRef = paystackRef;
 
-  } else if (_activePayMethod === 'wallet') {
-    if (!_activeWallet) { showMsg(msg,'error','Please select a wallet to continue.'); return; }
-    const qrWallets = ['snapscan','zapper'];
-    if (qrWallets.includes(_activeWallet)) {
-      // Simulate QR scan completion after 3s
-      showMsg(msg,'success','📷 Waiting for QR scan... Please scan the code in your app.');
-      setTimeout(() => completeOrder(), 3000);
-    } else {
-      // Simulate wallet redirect + return
-      showMsg(msg,'success','Redirecting to wallet... Please complete authorisation in the app.');
-      setTimeout(() => completeOrder(), 2500);
-    }
+  // Notify backend if connected
+  if (typeof confirmPaymentWithBackend === 'function') {
+    confirmPaymentWithBackend(orderRef, 'paystack').catch(function(){});
+  }
+
+  // Move to confirmation step
+  var s2 = document.getElementById('checkout-step-2');
+  var s3 = document.getElementById('checkout-step-3');
+  if (s2) s2.style.display = 'none';
+  if (s3) {
+    s3.style.display = 'block';
+    completeOrder();
   }
 }
 
