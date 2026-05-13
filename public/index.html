@@ -410,6 +410,13 @@ html { scroll-behavior:smooth; }
 .admin-grace-row { background:#fff8e1; }
 </style>
   <script src="https://js.paystack.co/v1/inline.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script>
+    // EmailJS init — replace with your EmailJS Public Key
+    (function() {
+      emailjs.init({ publicKey: "YOUR_EMAILJS_PUBLIC_KEY" });
+    })();
+  </script>
 </head>
 <body>
 
@@ -1009,6 +1016,29 @@ html { scroll-behavior:smooth; }
               </div>
             </div>
 
+            <!-- TEST VOUCHER CARD -->
+            <div style="background:#fff;border:2px dashed #e65100;overflow:hidden;margin-bottom:20px;">
+              <div style="background:#e65100;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:#fff;font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:1px;">🧪 Paystack Test Item</span>
+                <span style="background:#fff;color:#e65100;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:20px;">REMOVE AFTER TESTING</span>
+              </div>
+              <div style="padding:18px;display:flex;align-items:center;gap:20px;">
+                <div style="width:64px;height:64px;background:#fff3e0;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:2rem;">🎟️</div>
+                <div style="flex:1;">
+                  <div style="font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:4px;">Paystack Test Voucher</div>
+                  <div style="font-size:1.5rem;font-weight:800;color:#e65100;">R1</div>
+                  <p style="color:#888;font-size:.8rem;margin:4px 0 12px;">Test voucher — use this to verify Paystack checkout is working. Delete after testing.</p>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <button onclick="distShopQty('voucher',-1)" style="width:30px;height:30px;border:1.5px solid #ccc;background:#f5f5f0;font-size:1rem;cursor:pointer;font-weight:700;line-height:1;">−</button>
+                    <span id="distshop-voucher-qty" style="min-width:28px;text-align:center;font-weight:700;">1</span>
+                    <button onclick="distShopQty('voucher',1)" style="width:30px;height:30px;border:1.5px solid #ccc;background:#f5f5f0;font-size:1rem;cursor:pointer;font-weight:700;line-height:1;">+</button>
+                    <span style="font-size:.84rem;color:#333;">= <strong id="distshop-voucher-sub">R1</strong></span>
+                    <button onclick="distShopAddToCart('voucher')" style="margin-left:auto;background:#e65100;color:#fff;border:none;padding:9px 18px;font-family:'Outfit',sans-serif;font-weight:700;font-size:.82rem;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">+ Add to Cart</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- CART -->
             <div id="distshop-cart" style="display:none;background:#fff;border:2px solid var(--black);padding:20px;margin-bottom:16px;">
               <div style="font-weight:700;font-size:.95rem;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #eee;">🛒 Your Order</div>
@@ -1116,7 +1146,10 @@ html { scroll-behavior:smooth; }
       <!-- Admin top bar with logout -->
       <div style="display:flex;justify-content:space-between;align-items:center;background:var(--black);padding:12px 20px;margin-bottom:0;border-radius:4px 4px 0 0;">
         <div style="color:var(--yellow);font-weight:700;font-size:.88rem;letter-spacing:.5px;">🔐 ADMIN PANEL — You are logged in</div>
-        <button onclick="doAdminLogout()" style="background:#c62828;color:#fff;border:none;padding:8px 18px;font-family:'Outfit',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:background .2s;" onmouseover="this.style.background='#b71c1c'" onmouseout="this.style.background='#c62828'">⏏ Log Out</button>
+        <div style="display:flex;gap:8px;">
+          <button onclick="openModal('admin-change-creds')" style="background:#333;color:#fff;border:none;padding:8px 14px;font-family:'Outfit',sans-serif;font-weight:600;font-size:.78rem;cursor:pointer;border-radius:2px;">⚙ Change Credentials</button>
+          <button onclick="doAdminLogout()" style="background:#c62828;color:#fff;border:none;padding:8px 18px;font-family:'Outfit',sans-serif;font-weight:700;font-size:.8rem;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:background .2s;" onmouseover="this.style.background='#b71c1c'" onmouseout="this.style.background='#c62828'">⏏ Log Out</button>
+        </div>
       </div>
       <div class="admin-tabs">
         <button class="admin-tab active" onclick="switchAdmin('dist',this)">Distributors (<span id="admin-dist-count">0</span>)</button>
@@ -1375,6 +1408,9 @@ html { scroll-behavior:smooth; }
       <div class="checkout-step" id="step-tab-2" style="flex:1;padding:14px;text-align:center;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#aaa;border-bottom:3px solid transparent;cursor:default;">2 · Payment</div>
       <div class="checkout-step" id="step-tab-3" style="flex:1;padding:14px;text-align:center;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#aaa;border-bottom:3px solid transparent;cursor:default;">3 · Confirmation</div>
     </div>
+
+    <!-- Info banner for distshop/maintenance orders -->
+    <div id="order-maint-info" style="display:none;padding:0 28px;padding-top:16px;"></div>
 
     <!-- STEP 1: Order Details -->
     <div id="checkout-step-1" style="padding:28px 32px;min-height:100%;">
@@ -1809,6 +1845,7 @@ html { scroll-behavior:smooth; }
     <div class="form-group"><label>Username</label><input type="text" id="admin-user" placeholder="admin" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
     <div class="form-group"><label>Password</label><input type="password" id="admin-pass" placeholder="Enter password" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
     <button class="submit-btn" onclick="doAdminLogin()">Login as Admin</button>
+    <div class="login-or"><button class="link-btn" onclick="closeModal('admin-login');openModal('admin-forgot')">Forgot password?</button></div>
   </div>
 </div>
 
@@ -2322,53 +2359,34 @@ function doRegister() {
 
 // ── LOGIN ────────────────────────────────────────────────────
 function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const pass  = document.getElementById('login-pass').value;
-  const msg   = document.getElementById('login-msg');
+  var email = document.getElementById('login-email').value.trim().toLowerCase();
+  var pass  = document.getElementById('login-pass').value;
+  var msg   = document.getElementById('login-msg');
 
   if (!email || !pass) { showMsg(msg,'error','Please fill in all fields.'); return; }
 
-  const dist = getDistributors();
-  const found = Object.values(dist).find(d => d.email === email && d.password === pass);
-
-  if (!found) {
-    // Try backend API as fallback (for users registered via API)
-    apiPost('/auth/login', { email, password: pass }).then(r => {
-      if (r && r.token) {
-        setAuthToken(r.token);
-        showMsg(msg, 'success', `Welcome back, ${r.distributor.fname}! Loading your dashboard...`);
-        // Sync to localStorage
-        const dist2 = getDistributors();
-        if (!dist2[r.distributor.code]) {
-          dist2[r.distributor.code] = { ...r.distributor, password: pass, recruits: [], sales: [], maintenancePayments: [], payouts: [] };
-          saveDistributors(dist2);
-        }
-        setTimeout(() => {
-          closeModal('login');
-          loadDashboard(r.distributor.code);
-          showWelcomeBanner(r.distributor.code, false);
-          document.getElementById('portal').scrollIntoView({ behavior: 'smooth' });
-        }, 1000);
-      } else {
-        showMsg(msg, 'error', 'Incorrect email or password. Please try again.');
-      }
-    });
-    return;
-  }
-  // Also sync token for online use
-  apiPost('/auth/login', { email, password: pass }).then(r => {
-    if (r && r.token) setAuthToken(r.token);
+  var dist  = getDistributors();
+  var found = Object.values(dist).find(function(d) {
+    return d.email === email && (d.password === pass || d.password_hash === hashString(pass));
   });
 
-  showMsg(msg,'success',`Welcome back, ${found.fname}! Loading your dashboard...`);
-  setCurrentUser({ code: found.code });
-
-  setTimeout(() => {
+  if (found) {
     closeModal('login');
+    setCurrentUser({ code: found.code });
     loadDashboard(found.code);
     showWelcomeBanner(found.code, false);
-    document.getElementById('portal').scrollIntoView({ behavior:'smooth' });
-  }, 1000);
+    document.getElementById('portal').scrollIntoView({ behavior: 'smooth' });
+  } else {
+    // Clear password field on failure
+    document.getElementById('login-pass').value = '';
+    showMsg(msg, 'error', 'Incorrect email or password. Please try again.');
+  }
+}
+
+// Simple hash for password comparison (matches registration)
+function hashString(str) {
+  // This matches the simple storage used in localStorage registrations
+  return str; // localStorage stores plain password
 }
 
 // ── LOAD DASHBOARD ───────────────────────────────────────────
@@ -2550,9 +2568,26 @@ function loadDashboard(code) {
 }
 
 function logoutDash() {
+  // Clear session
   sessionStorage.removeItem('silu_current');
+  localStorage.removeItem('silu_jwt');
+  localStorage.removeItem('silu_api_code');
+
+  // Hide dashboard, show login area
   document.getElementById('dash-container').style.display = 'none';
-  document.getElementById('portal-login-area').style.display = 'block';
+  document.getElementById('portal-login-area').style.display = 'flex';
+
+  // Clear login fields so they can type again immediately
+  var le = document.getElementById('login-email');
+  var lp = document.getElementById('login-pass');
+  var lm = document.getElementById('login-msg');
+  if (le) le.value = '';
+  if (lp) lp.value = '';
+  if (lm) lm.className = 'form-msg';
+
+  // Scroll portal into view
+  var portal = document.getElementById('portal');
+  if (portal) portal.scrollIntoView({ behavior: 'smooth' });
 }
 
 // ── DASHBOARD TAB SWITCHER ───────────────────────────────────
@@ -2665,6 +2700,22 @@ function updateOrderTotal() {
   const subEl = document.getElementById('order-subtotal-display');
   if (subEl) subEl.textContent = `R${sub}`;
   document.getElementById('order-total-display').textContent = `R${total}`;
+}
+
+function setStepActive(n) {
+  for (var i = 1; i <= 3; i++) {
+    var tab = document.getElementById('step-tab-' + i);
+    if (!tab) continue;
+    if (i === n) {
+      tab.style.color = 'var(--black)';
+      tab.style.borderBottomColor = 'var(--black)';
+      tab.style.fontWeight = '700';
+    } else {
+      tab.style.color = '#aaa';
+      tab.style.borderBottomColor = 'transparent';
+      tab.style.fontWeight = '600';
+    }
+  }
 }
 
 function goToPayment() {
@@ -2881,13 +2932,73 @@ function processPayment() {
 }
 
 function paystackSuccess(paystackRef, orderRef, amount) {
-  // Mark order as paid in localStorage
   window._paystackRef = paystackRef;
 
   // Notify backend if connected
   if (typeof confirmPaymentWithBackend === 'function') {
     confirmPaymentWithBackend(orderRef, 'paystack').catch(function(){});
   }
+
+  // Gather all order details for the email
+  var productEl  = document.getElementById('order-product');
+  var qtyEl      = document.getElementById('order-qty');
+  var nameEl     = document.getElementById('order-name');
+  var emailEl    = document.getElementById('order-email');
+  var phoneEl    = document.getElementById('order-phone');
+  var pepEl      = document.getElementById('order-addr');
+
+  var product  = productEl  ? productEl.value  : '';
+  var qty      = qtyEl      ? parseInt(qtyEl.value) || 1 : 1;
+  var custName = nameEl     ? nameEl.value.trim()  : '';
+  var custEmail= emailEl    ? emailEl.value.trim()  : '';
+  var custPhone= phoneEl    ? phoneEl.value.trim()  : '';
+  var pepStore = pepEl      ? pepEl.value.trim()    : '';
+
+  // Get totals
+  var overrideTotals = window._distShopOverrideTotal;
+  var sub     = overrideTotals ? overrideTotals.sub   : (qty * 200);
+  var paxi    = overrideTotals ? (amount - overrideTotals.sub) : 60;
+  var total   = amount;
+
+  // Get distributor info if logged in
+  var distCode = '', distName = '', distRank = '', distCity = '';
+  var cu = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  if (cu) {
+    var dists = typeof getDistributors === 'function' ? getDistributors() : {};
+    var dist  = dists[cu.code];
+    if (dist) {
+      distCode = dist.code || '';
+      distName = (dist.fname || '') + ' ' + (dist.lname || '');
+      distRank = dist.rank_name || '';
+      distCity = dist.city || '';
+    }
+  }
+
+  // Determine order type label
+  var orderTypeLabel = 'Product Order';
+  if (window._pendingPaymentType === 'registration') orderTypeLabel = 'Registration Pack';
+  if (window._pendingPaymentType === 'maintenance')  orderTypeLabel = 'Maintenance Payment';
+  if (window._pendingPaymentType === 'distshop')     orderTypeLabel = 'Distributor Stock Order';
+
+  // Send notification email
+  sendOrderEmail({
+    orderNo:       orderRef,
+    orderType:     orderTypeLabel,
+    customerName:  custName,
+    customerEmail: custEmail,
+    customerPhone: custPhone,
+    pepStore:      pepStore,
+    distCode:      distCode,
+    distName:      distName,
+    distRank:      distRank,
+    distCity:      distCity,
+    product:       product,
+    qty:           qty,
+    subtotal:      sub,
+    shipping:      paxi,
+    total:         total,
+    paystackRef:   paystackRef,
+  });
 
   // Move to confirmation step
   var s2 = document.getElementById('checkout-step-2');
@@ -3132,27 +3243,31 @@ function doOrder() { goToPayment(); }
 
 // ── ADMIN LOGIN ──────────────────────────────────────────────
 function doAdminLogin() {
-  const user = document.getElementById('admin-user').value.trim();
-  const pass = document.getElementById('admin-pass').value;
-  const msg  = document.getElementById('admin-login-msg');
-  if ((user==='admin'||user==='owner') && pass==='admin123') {
-    showMsg(msg,'success','Admin access granted! Opening panel...');
-    setTimeout(() => {
+  var user = document.getElementById('admin-user').value.trim();
+  var pass = document.getElementById('admin-pass').value;
+  var msg  = document.getElementById('admin-login-msg');
+
+  // Check against stored admin credentials (changeable)
+  var storedUser = localStorage.getItem('silu_admin_user') || 'admin';
+  var storedPass = localStorage.getItem('silu_admin_pass') || 'admin123';
+
+  if (user === storedUser && pass === storedPass) {
+    showMsg(msg, 'success', 'Access granted!');
+    setTimeout(function() {
       closeModal('admin-login');
-      // Show the admin area and load data
-      const adminArea = document.getElementById('admin-area');
+      document.getElementById('admin-pass').value = '';
+      var adminArea = document.getElementById('admin-area');
       adminArea.style.display = 'block';
       loadAdminPanel();
       renderAdminMaintenance();
-      // Scroll to admin panel
-      setTimeout(() => {
-        document.getElementById('admin-panel').scrollIntoView({ behavior:'smooth' });
+      setTimeout(function() {
+        document.getElementById('admin-panel').scrollIntoView({ behavior: 'smooth' });
       }, 100);
-      // Update login button to show logout
       updateAdminLoginBtn(true);
-    }, 600);
+    }, 500);
   } else {
-    showMsg(msg,'error','Incorrect credentials. Try: admin / admin123');
+    document.getElementById('admin-pass').value = '';
+    showMsg(msg, 'error', 'Incorrect username or password.');
   }
 }
 
@@ -3169,8 +3284,14 @@ function updateAdminLoginBtn(loggedIn) {
 function doAdminLogout() {
   document.getElementById('admin-area').style.display = 'none';
   updateAdminLoginBtn(false);
-  // Scroll back up to admin panel top
-  document.getElementById('admin-panel').scrollIntoView({ behavior:'smooth' });
+  // Clear admin fields for clean re-login
+  var au = document.getElementById('admin-user');
+  var ap = document.getElementById('admin-pass');
+  var am = document.getElementById('admin-login-msg');
+  if (au) au.value = '';
+  if (ap) ap.value = '';
+  if (am) am.className = 'form-msg';
+  document.getElementById('admin-panel').scrollIntoView({ behavior: 'smooth' });
 }
 
 function loadAdminPanel() {
@@ -4128,21 +4249,25 @@ function acceptDisclaimers() {
 // ══════════════════════════════════════════════════════════
 var DIST_PRICE = 100;
 var DIST_PAXI  = 60;
-var _distCart  = { oil: 0, serum: 0 };
+var _distCart  = { oil: 0, serum: 0, voucher: 0 };
 
 function distShopQty(product, delta) {
-  var qtyId = product === 'oil' ? 'distshop-oil-qty' : 'distshop-serum-qty';
-  var subId = product === 'oil' ? 'distshop-oil-sub' : 'distshop-serum-sub';
+  var qtyId = product === 'oil'     ? 'distshop-oil-qty'     :
+              product === 'serum'   ? 'distshop-serum-qty'   : 'distshop-voucher-qty';
+  var subId = product === 'oil'     ? 'distshop-oil-sub'     :
+              product === 'serum'   ? 'distshop-serum-sub'   : 'distshop-voucher-sub';
+  var price = product === 'voucher' ? 1 : DIST_PRICE;
   var el = document.getElementById(qtyId);
   if (!el) return;
   var qty = Math.max(1, (parseInt(el.textContent) || 1) + delta);
   el.textContent = qty;
   var sub = document.getElementById(subId);
-  if (sub) sub.textContent = 'R' + (qty * DIST_PRICE);
+  if (sub) sub.textContent = 'R' + (qty * price);
 }
 
 function distShopAddToCart(product) {
-  var qtyId = product === 'oil' ? 'distshop-oil-qty' : 'distshop-serum-qty';
+  var qtyId = product === 'oil'   ? 'distshop-oil-qty'     :
+              product === 'serum' ? 'distshop-serum-qty'   : 'distshop-voucher-qty';
   var el = document.getElementById(qtyId);
   var qty = parseInt(el ? el.textContent : '1') || 1;
   _distCart[product] = (_distCart[product] || 0) + qty;
@@ -4154,31 +4279,37 @@ function distShopRenderCart() {
   var linesEl = document.getElementById('distshop-cart-lines');
   var subEl   = document.getElementById('distshop-cart-sub');
   var totEl   = document.getElementById('distshop-cart-total');
-  var o = _distCart.oil || 0, s = _distCart.serum || 0;
-  if (o + s === 0) { if (cartEl) cartEl.style.display = 'none'; return; }
+  var o = _distCart.oil || 0, s = _distCart.serum || 0, v = _distCart.voucher || 0;
+  if (o + s + v === 0) { if (cartEl) cartEl.style.display = 'none'; return; }
   if (cartEl) cartEl.style.display = 'block';
   var html = '';
   if (o > 0) html += '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0e8;font-size:.88rem;"><span>Hair Growth Oil × ' + o + '</span><span style="font-weight:600;">R' + (o * DIST_PRICE) + '</span></div>';
   if (s > 0) html += '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0e8;font-size:.88rem;"><span>Hair Growth Serum × ' + s + '</span><span style="font-weight:600;">R' + (s * DIST_PRICE) + '</span></div>';
+  if (v > 0) html += '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0e8;font-size:.88rem;"><span>🎟️ Test Voucher × ' + v + '</span><span style="font-weight:600;">R' + v + '</span></div>';
   if (linesEl) linesEl.innerHTML = html;
-  var sub = (o + s) * DIST_PRICE, total = sub + DIST_PAXI;
+  var sub = (o + s) * DIST_PRICE + v;
+  var paxi = (o + s > 0) ? DIST_PAXI : 0; // no Paxi for voucher-only orders
+  var total = sub + paxi;
   if (subEl) subEl.textContent = 'R' + sub;
   if (totEl) totEl.textContent = 'R' + total;
 }
 
 function distShopClearCart() {
-  _distCart = { oil: 0, serum: 0 };
+  _distCart = { oil: 0, serum: 0, voucher: 0 };
   distShopRenderCart();
 }
 
 function distShopCheckout() {
-  var o = _distCart.oil || 0, s = _distCart.serum || 0;
-  if (o + s === 0) { alert('Please add at least one product to your order.'); return; }
+  var o = _distCart.oil || 0, s = _distCart.serum || 0, v = _distCart.voucher || 0;
+  if (o + s + v === 0) { alert('Please add at least one product to your order.'); return; }
   var parts = [];
   if (o > 0) parts.push('Hair Growth Oil x' + o);
   if (s > 0) parts.push('Hair Growth Serum x' + s);
+  if (v > 0) parts.push('Test Voucher x' + v);
   var productStr = parts.join(' + ');
-  var sub = (o + s) * DIST_PRICE, total = sub + DIST_PAXI;
+  var sub = (o + s) * DIST_PRICE + v * 1;
+  var paxi = (o + s > 0) ? DIST_PAXI : 0; // no Paxi for voucher-only
+  var total = sub + paxi;
   var cu   = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
   var dist = cu && typeof getDistributors === 'function' ? getDistributors()[cu.code] : null;
   window._pendingPaymentType    = 'distshop';
@@ -4384,6 +4515,204 @@ document.addEventListener('DOMContentLoaded', function() {
   }, 1200);
 });
 
+
+// ══════════════════════════════════════════════════════════
+// ADMIN CHANGE CREDENTIALS
+// ══════════════════════════════════════════════════════════
+function doChangeAdminCreds() {
+  var currentPass   = document.getElementById('creds-current-pass').value;
+  var newUser       = document.getElementById('creds-new-user').value.trim();
+  var newPass       = document.getElementById('creds-new-pass').value;
+  var confirmPass   = document.getElementById('creds-confirm-pass').value;
+  var msg           = document.getElementById('admin-creds-msg');
+
+  var storedPass = localStorage.getItem('silu_admin_pass') || 'admin123';
+
+  if (!currentPass) { showMsg(msg,'error','Enter your current password.'); return; }
+  if (currentPass !== storedPass) { showMsg(msg,'error','Current password is incorrect.'); return; }
+  if (!newUser) { showMsg(msg,'error','Enter a new username.'); return; }
+  if (newPass.length < 8) { showMsg(msg,'error','New password must be at least 8 characters.'); return; }
+  if (newPass !== confirmPass) { showMsg(msg,'error','Passwords do not match.'); return; }
+
+  localStorage.setItem('silu_admin_user', newUser);
+  localStorage.setItem('silu_admin_pass', newPass);
+
+  showMsg(msg,'success','Credentials updated! Use your new details next time you log in.');
+  setTimeout(function() {
+    closeModal('admin-change-creds');
+    document.getElementById('creds-current-pass').value = '';
+    document.getElementById('creds-new-user').value = '';
+    document.getElementById('creds-new-pass').value = '';
+    document.getElementById('creds-confirm-pass').value = '';
+  }, 1500);
+}
+
+// ══════════════════════════════════════════════════════════
+// DISTRIBUTOR FORGOT PASSWORD
+// ══════════════════════════════════════════════════════════
+var _forgotVerified = false;
+
+function doForgotPassword() {
+  var email   = document.getElementById('forgot-email').value.trim().toLowerCase();
+  var idnum   = document.getElementById('forgot-idnum').value.trim();
+  var msg     = document.getElementById('forgot-msg');
+
+  if (!_forgotVerified) {
+    // Step 1 — verify identity
+    if (!email || !idnum) { showMsg(msg,'error','Please fill in all fields.'); return; }
+    if (idnum.length !== 13) { showMsg(msg,'error','Enter your full 13-digit ID number.'); return; }
+
+    var dists = getDistributors();
+    var found = Object.values(dists).find(function(d) {
+      return d.email === email && d.id_number === idnum;
+    });
+
+    if (!found) {
+      showMsg(msg,'error','No account found with that email and ID number combination.');
+      return;
+    }
+
+    // Identity verified — show new password fields
+    _forgotVerified = true;
+    document.getElementById('forgot-newpass-group').style.display = 'block';
+    document.getElementById('forgot-confirmpass-group').style.display = 'block';
+    document.getElementById('forgot-btn').textContent = 'Set New Password';
+    showMsg(msg,'success','Identity verified! Enter your new password below.');
+
+  } else {
+    // Step 2 — set new password
+    var newPass     = document.getElementById('forgot-new-pass').value;
+    var confirmPass = document.getElementById('forgot-confirm-pass').value;
+
+    if (newPass.length < 8) { showMsg(msg,'error','Password must be at least 8 characters.'); return; }
+    if (newPass !== confirmPass) { showMsg(msg,'error','Passwords do not match.'); return; }
+
+    var email2 = document.getElementById('forgot-email').value.trim().toLowerCase();
+    var dists  = getDistributors();
+    var found2 = Object.values(dists).find(function(d) { return d.email === email2; });
+
+    if (found2) {
+      dists[found2.code].password = newPass;
+      saveDistributors(dists);
+      showMsg(msg,'success','Password reset successfully! You can now log in with your new password.');
+      setTimeout(function() {
+        closeModal('forgot-password');
+        _forgotVerified = false;
+        // Reset form
+        ['forgot-email','forgot-idnum','forgot-new-pass','forgot-confirm-pass'].forEach(function(id) {
+          var el = document.getElementById(id); if (el) el.value = '';
+        });
+        document.getElementById('forgot-newpass-group').style.display = 'none';
+        document.getElementById('forgot-confirmpass-group').style.display = 'none';
+        document.getElementById('forgot-btn').textContent = 'Verify Identity';
+        openModal('login');
+      }, 1500);
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// ADMIN FORGOT PASSWORD (uses master reset code)
+// ══════════════════════════════════════════════════════════
+var MASTER_RESET_CODE = 'SiLuAdmin2026!';  // Change this to something private
+var _adminForgotVerified = false;
+
+function doAdminForgotPassword() {
+  var msg = document.getElementById('admin-forgot-msg');
+
+  if (!_adminForgotVerified) {
+    var code = document.getElementById('admin-reset-code').value;
+    if (code !== MASTER_RESET_CODE) {
+      showMsg(msg,'error','Incorrect master reset code.');
+      document.getElementById('admin-reset-code').value = '';
+      return;
+    }
+    _adminForgotVerified = true;
+    document.getElementById('admin-forgot-newfields').style.display = 'block';
+    document.getElementById('admin-reset-btn').textContent = 'Reset Credentials';
+    showMsg(msg,'success','Code verified! Set your new credentials below.');
+
+  } else {
+    var newUser = document.getElementById('admin-new-user').value.trim();
+    var newPass = document.getElementById('admin-new-pass').value;
+
+    if (!newUser) { showMsg(msg,'error','Enter a new username.'); return; }
+    if (newPass.length < 8) { showMsg(msg,'error','Password must be at least 8 characters.'); return; }
+
+    localStorage.setItem('silu_admin_user', newUser);
+    localStorage.setItem('silu_admin_pass', newPass);
+
+    showMsg(msg,'success','Admin credentials reset successfully!');
+    setTimeout(function() {
+      _adminForgotVerified = false;
+      closeModal('admin-forgot');
+      ['admin-reset-code','admin-new-user','admin-new-pass'].forEach(function(id) {
+        var el = document.getElementById(id); if (el) el.value = '';
+      });
+      document.getElementById('admin-forgot-newfields').style.display = 'none';
+      document.getElementById('admin-reset-btn').textContent = 'Verify Code';
+      openModal('admin-login');
+    }, 1500);
+  }
+}
+
+
+// ══════════════════════════════════════════════════════════
+// ORDER EMAIL NOTIFICATION
+// Sends order details to Siphokazi.sigenu@gmail.com
+// via EmailJS (emailjs.com — free account needed)
+// ══════════════════════════════════════════════════════════
+
+// EmailJS config — fill in after creating free account at emailjs.com
+var EMAILJS_SERVICE_ID  = 'YOUR_SERVICE_ID';   // e.g. 'service_abc123'
+var EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';  // e.g. 'template_xyz789'
+var NOTIFY_EMAIL        = 'Siphokazi.sigenu@gmail.com';
+
+function sendOrderEmail(orderDetails) {
+  if (!window.emailjs) {
+    console.log('EmailJS not loaded — email skipped');
+    return;
+  }
+  if (EMAILJS_SERVICE_ID.includes('YOUR_') || EMAILJS_TEMPLATE_ID.includes('YOUR_')) {
+    console.log('EmailJS not configured yet — email skipped');
+    return;
+  }
+
+  var params = {
+    to_email:         NOTIFY_EMAIL,
+    to_name:          'SiLu Naturals',
+    order_no:         orderDetails.orderNo        || 'N/A',
+    order_type:       orderDetails.orderType      || 'Product Order',
+    order_date:       new Date().toLocaleString('en-ZA'),
+    // Customer / Distributor details
+    customer_name:    orderDetails.customerName   || 'N/A',
+    customer_email:   orderDetails.customerEmail  || 'N/A',
+    customer_phone:   orderDetails.customerPhone  || 'N/A',
+    pep_store:        orderDetails.pepStore        || 'N/A',
+    // Distributor info (if logged in)
+    dist_code:        orderDetails.distCode        || 'N/A',
+    dist_name:        orderDetails.distName        || 'N/A',
+    dist_rank:        orderDetails.distRank        || 'N/A',
+    dist_city:        orderDetails.distCity        || 'N/A',
+    // Order details
+    product:          orderDetails.product         || 'N/A',
+    qty:              orderDetails.qty             || 1,
+    subtotal:         'R' + (orderDetails.subtotal || 0),
+    shipping:         'R' + (orderDetails.shipping || 0),
+    total:            'R' + (orderDetails.total    || 0),
+    payment_method:   'Paystack',
+    paystack_ref:     orderDetails.paystackRef     || 'N/A',
+  };
+
+  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params)
+    .then(function() {
+      console.log('Order notification email sent to ' + NOTIFY_EMAIL);
+    })
+    .catch(function(err) {
+      console.warn('Email failed:', err);
+    });
+}
+
 </script>
 
 <!-- reg payment → routed through main checkout -->
@@ -4571,6 +4900,85 @@ document.addEventListener('DOMContentLoaded', function() {
   <button onclick="lightboxNav(1);event.stopPropagation();" id="lightbox-next" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;font-size:2rem;width:46px;height:46px;border-radius:50%;cursor:pointer;z-index:100001;line-height:1;display:none;">&#8250;</button>
   <!-- Dot indicators -->
   <div id="lightbox-dots" style="position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:8px;"></div>
+</div>
+
+<!-- ADMIN CHANGE CREDENTIALS MODAL -->
+<div class="modal-overlay" id="modal-admin-change-creds">
+  <div class="modal" style="max-width:440px;">
+    <button class="modal-close" onclick="closeModal('admin-change-creds')">×</button>
+    <h2>Change Admin Credentials</h2>
+    <p class="sub">Update your admin username and password.</p>
+    <div id="admin-creds-msg" class="form-msg"></div>
+    <div class="form-group">
+      <label>Current Password</label>
+      <input type="password" id="creds-current-pass" placeholder="Enter current password">
+    </div>
+    <div class="form-group">
+      <label>New Username</label>
+      <input type="text" id="creds-new-user" placeholder="New username">
+    </div>
+    <div class="form-group">
+      <label>New Password</label>
+      <input type="password" id="creds-new-pass" placeholder="Min 8 characters">
+    </div>
+    <div class="form-group">
+      <label>Confirm New Password</label>
+      <input type="password" id="creds-confirm-pass" placeholder="Repeat new password">
+    </div>
+    <button class="submit-btn" onclick="doChangeAdminCreds()">Update Credentials</button>
+  </div>
+</div>
+
+<!-- DISTRIBUTOR FORGOT PASSWORD MODAL -->
+<div class="modal-overlay" id="modal-forgot-password">
+  <div class="modal" style="max-width:440px;">
+    <button class="modal-close" onclick="closeModal('forgot-password')">×</button>
+    <h2>Reset Password</h2>
+    <p class="sub">Enter your email and ID number to reset your password.</p>
+    <div id="forgot-msg" class="form-msg"></div>
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="forgot-email" placeholder="Your registered email">
+    </div>
+    <div class="form-group">
+      <label>ID Number</label>
+      <input type="text" id="forgot-idnum" placeholder="Your 13-digit SA ID number" maxlength="13">
+    </div>
+    <div class="form-group" id="forgot-newpass-group" style="display:none;">
+      <label>New Password</label>
+      <input type="password" id="forgot-new-pass" placeholder="Min 8 characters">
+    </div>
+    <div class="form-group" id="forgot-confirmpass-group" style="display:none;">
+      <label>Confirm New Password</label>
+      <input type="password" id="forgot-confirm-pass" placeholder="Repeat new password">
+    </div>
+    <button class="submit-btn" id="forgot-btn" onclick="doForgotPassword()">Verify Identity</button>
+  </div>
+</div>
+
+<!-- ADMIN FORGOT PASSWORD MODAL -->
+<div class="modal-overlay" id="modal-admin-forgot">
+  <div class="modal" style="max-width:440px;">
+    <button class="modal-close" onclick="closeModal('admin-forgot')">×</button>
+    <h2>Admin Password Reset</h2>
+    <p class="sub">Enter the master reset code to reset admin credentials.</p>
+    <div id="admin-forgot-msg" class="form-msg"></div>
+    <div class="form-group">
+      <label>Master Reset Code</label>
+      <input type="password" id="admin-reset-code" placeholder="Enter master code">
+    </div>
+    <div id="admin-forgot-newfields" style="display:none;">
+      <div class="form-group">
+        <label>New Username</label>
+        <input type="text" id="admin-new-user" placeholder="New username">
+      </div>
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="password" id="admin-new-pass" placeholder="Min 8 characters">
+      </div>
+    </div>
+    <button class="submit-btn" id="admin-reset-btn" onclick="doAdminForgotPassword()">Verify Code</button>
+  </div>
 </div>
 </body>
 </html>
