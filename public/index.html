@@ -1183,10 +1183,31 @@ html { scroll-behavior:smooth; }
       </div>
       <!-- SALES -->
       <div class="admin-section" id="admin-sales">
-        <div class="stats-row">
-          <div class="stat-card" style="background:var(--yellow);"><div class="stat-val" id="admin-total-rev">R0</div><div class="stat-lbl">Total Revenue</div></div>
-          <div class="stat-card"><div class="stat-val" id="admin-total-units">0</div><div class="stat-lbl">Units Sold</div></div>
-          <div class="stat-card"><div class="stat-val" id="admin-active-dist">0</div><div class="stat-lbl">Distributors</div></div>
+        <!-- Summary tiles -->
+        <div class="stats-row" style="margin-bottom:16px;">
+          <div class="stat-card" style="background:var(--yellow);cursor:pointer;transition:transform .15s;" onclick="adminShowDetail('revenue')" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='none'" title="Click to see revenue breakdown">
+            <div class="stat-val" id="admin-total-rev">R0</div>
+            <div class="stat-lbl">Total Revenue</div>
+            <div style="font-size:.68rem;opacity:.7;margin-top:4px;">Click for breakdown →</div>
+          </div>
+          <div class="stat-card" style="cursor:pointer;transition:transform .15s;" onclick="adminShowDetail('units')" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='none'" title="Click to see units sold">
+            <div class="stat-val" id="admin-total-units">0</div>
+            <div class="stat-lbl">Units Sold</div>
+            <div style="font-size:.68rem;opacity:.7;margin-top:4px;">Click for breakdown →</div>
+          </div>
+          <div class="stat-card" style="cursor:pointer;transition:transform .15s;" onclick="adminShowDetail('distributors')" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='none'" title="Click to see distributor list">
+            <div class="stat-val" id="admin-active-dist">0</div>
+            <div class="stat-lbl">Active Distributors</div>
+            <div style="font-size:.68rem;opacity:.7;margin-top:4px;">Click for list →</div>
+          </div>
+        </div>
+        <!-- Detail panel -->
+        <div id="admin-detail-panel" style="display:none;background:#fff;border:1px solid #e8e8e0;padding:22px 24px;margin-top:4px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <strong id="admin-detail-title" style="font-size:1rem;"></strong>
+            <button onclick="document.getElementById('admin-detail-panel').style.display='none'" style="background:none;border:1px solid #ddd;padding:5px 12px;cursor:pointer;font-size:.82rem;color:#666;">✕ Close</button>
+          </div>
+          <div id="admin-detail-body"></div>
         </div>
       </div>
       <!-- RANKS -->
@@ -2050,19 +2071,27 @@ function seedDemo() {
     };
   }
 
-  // ── SIYANDA1 — Siyanda Alla (works on all devices) ───
+  // ── SIYANDA1 — Siyanda Alla (real account, all devices) ──
   if (!dist['SIYANDA1']) {
     dist['SIYANDA1'] = {
       code:'SIYANDA1', fname:'Siyanda', lname:'Alla',
       email:'siyandaallah@gmail.com', phone:'069 743 7904', city:'Port Elizabeth',
-      pack:'Gold', password:'Silu2026!', joinDate:'2026-01-01',
-      sponsorCode:'THANDI001',
+      pack:'Gold', password:'Silu2026!', joinDate:'2026-05-14',
+      sponsorCode: null,
       recruits:[],
       sales:[],
       payouts:[],
-      rankHistory:[{rankName:'Member',achievedDate:'2026-01-01'}],
+      maintenancePayments:[],
+      rankHistory:[{rankName:'Unranked',achievedDate:'2026-05-14'}],
       status:'active'
     };
+  } else {
+    // Ensure no stale sales/recruits on existing devices
+    if (!dist['SIYANDA1'].joinDate || dist['SIYANDA1'].joinDate === '2026-01-01') {
+      dist['SIYANDA1'].sales = [];
+      dist['SIYANDA1'].recruits = dist['SIYANDA1'].recruits || [];
+      dist['SIYANDA1'].joinDate = '2026-05-14';
+    }
   }
 
   saveDistributors(dist);
@@ -4737,6 +4766,122 @@ function cleanOldDemoProfiles() {
     if (dist[code]) { delete dist[code]; changed = true; }
   });
   if (changed) saveDistributors(dist);
+}
+
+
+// ══════════════════════════════════════════════════════════
+// ADMIN STAT TILE DRILL-DOWN
+// ══════════════════════════════════════════════════════════
+function adminShowDetail(type) {
+  var panel  = document.getElementById('admin-detail-panel');
+  var title  = document.getElementById('admin-detail-title');
+  var body   = document.getElementById('admin-detail-body');
+  var dist   = getDistributors();
+  var all    = Object.values(dist);
+  panel.style.display = 'block';
+
+  if (type === 'revenue') {
+    title.textContent = '💰 Revenue Breakdown — All Distributors';
+    var rows = '';
+    var grandTotal = 0;
+    all.forEach(function(d) {
+      var sales = (d.sales || []);
+      var rev = sales.reduce(function(s,x){ return s + (x.qty||0)*200; }, 0);
+      grandTotal += rev;
+      if (sales.length === 0) return;
+      rows += '<tr style="border-bottom:1px solid #f0f0e8;">' +
+        '<td style="padding:8px 6px;font-weight:600;">' + d.fname + ' ' + d.lname + '</td>' +
+        '<td style="padding:8px 6px;color:#555;">' + d.code + '</td>' +
+        '<td style="padding:8px 6px;">' + getRank((d.recruits||[]).length, d).name + '</td>' +
+        '<td style="padding:8px 6px;">' + sales.length + ' sales</td>' +
+        '<td style="padding:8px 6px;">' + sales.reduce(function(s,x){return s+(x.qty||0);},0) + ' units</td>' +
+        '<td style="padding:8px 6px;font-weight:700;color:#2e7d32;">R' + rev + '</td>' +
+        '</tr>';
+    });
+    body.innerHTML = rows
+      ? '<table style="width:100%;border-collapse:collapse;font-size:.88rem;">' +
+        '<thead><tr style="background:#f9f9f0;"><th style="padding:8px 6px;text-align:left;">Name</th><th style="padding:8px 6px;text-align:left;">Code</th><th style="padding:8px 6px;text-align:left;">Rank</th><th style="padding:8px 6px;text-align:left;">Sales</th><th style="padding:8px 6px;text-align:left;">Units</th><th style="padding:8px 6px;text-align:left;">Revenue</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+        '<tfoot><tr style="background:var(--yellow);"><td colspan="5" style="padding:10px 6px;font-weight:700;">Grand Total</td><td style="padding:10px 6px;font-weight:800;font-size:1rem;">R' + grandTotal + '</td></tr></tfoot>' +
+        '</table>'
+      : '<p style="color:#aaa;text-align:center;padding:20px;">No sales recorded yet.</p>';
+
+  } else if (type === 'units') {
+    title.textContent = '📦 Units Sold — Product Breakdown';
+    var oilTotal = 0, serumTotal = 0, otherTotal = 0;
+    var distRows = '';
+    all.forEach(function(d) {
+      var oil = 0, serum = 0, other = 0;
+      (d.sales||[]).forEach(function(s) {
+        var q = s.qty || 0;
+        if ((s.product||'').toLowerCase().includes('oil'))   oil   += q;
+        else if ((s.product||'').toLowerCase().includes('serum')) serum += q;
+        else other += q;
+      });
+      oilTotal   += oil;
+      serumTotal += serum;
+      otherTotal += other;
+      if (oil + serum + other === 0) return;
+      distRows += '<tr style="border-bottom:1px solid #f0f0e8;">' +
+        '<td style="padding:8px 6px;font-weight:600;">' + d.fname + ' ' + d.lname + '</td>' +
+        '<td style="padding:8px 6px;">' + d.city + '</td>' +
+        '<td style="padding:8px 6px;">' + oil + '</td>' +
+        '<td style="padding:8px 6px;">' + serum + '</td>' +
+        '<td style="padding:8px 6px;font-weight:700;">' + (oil+serum+other) + '</td>' +
+        '</tr>';
+    });
+    var summary = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">' +
+      '<div style="background:var(--yellow);padding:14px;text-align:center;"><div style="font-size:1.6rem;font-weight:800;">' + oilTotal + '</div><div style="font-size:.8rem;font-weight:600;">Hair Growth Oil</div></div>' +
+      '<div style="background:#f9f9f0;border:1px solid #e0e0d8;padding:14px;text-align:center;"><div style="font-size:1.6rem;font-weight:800;">' + serumTotal + '</div><div style="font-size:.8rem;font-weight:600;">Hair Growth Serum</div></div>' +
+      '<div style="background:var(--black);color:#fff;padding:14px;text-align:center;"><div style="font-size:1.6rem;font-weight:800;">' + (oilTotal+serumTotal+otherTotal) + '</div><div style="font-size:.8rem;font-weight:600;">Total Units</div></div>' +
+      '</div>';
+    body.innerHTML = summary + (distRows
+      ? '<table style="width:100%;border-collapse:collapse;font-size:.88rem;">' +
+        '<thead><tr style="background:#f9f9f0;"><th style="padding:8px 6px;text-align:left;">Distributor</th><th style="padding:8px 6px;text-align:left;">City</th><th style="padding:8px 6px;text-align:left;">Oil</th><th style="padding:8px 6px;text-align:left;">Serum</th><th style="padding:8px 6px;text-align:left;">Total</th></tr></thead>' +
+        '<tbody>' + distRows + '</tbody></table>'
+      : '<p style="color:#aaa;text-align:center;padding:20px;">No sales recorded yet.</p>');
+
+  } else if (type === 'distributors') {
+    title.textContent = '👥 All Distributors — Status & Performance';
+    var rows2 = '';
+    var active = 0, grace = 0, suspended = 0, pending = 0;
+    all.forEach(function(d) {
+      var ms    = getMaintenanceStatus(d);
+      var rank  = getRank((d.recruits||[]).length, d);
+      var units = (d.sales||[]).reduce(function(s,x){return s+(x.qty||0);},0);
+      var rev   = units * 200;
+      var statusColor = ms.status==='active' ? '#2e7d32' : ms.status==='grace' ? '#e65100' : '#c62828';
+      var statusLabel = ms.status.charAt(0).toUpperCase() + ms.status.slice(1);
+      if (ms.status==='active')    active++;
+      else if (ms.status==='grace')    grace++;
+      else if (ms.status==='suspended') suspended++;
+      else pending++;
+      rows2 += '<tr style="border-bottom:1px solid #f0f0e8;">' +
+        '<td style="padding:8px 6px;font-weight:600;">' + d.fname + ' ' + d.lname + '</td>' +
+        '<td style="padding:8px 6px;font-size:.8rem;color:#555;">' + d.email + '</td>' +
+        '<td style="padding:8px 6px;">' + d.code + '</td>' +
+        '<td style="padding:8px 6px;">' + rank.name + '</td>' +
+        '<td style="padding:8px 6px;">' + (d.recruits||[]).length + '</td>' +
+        '<td style="padding:8px 6px;">' + units + ' / R' + rev + '</td>' +
+        '<td style="padding:8px 6px;">' + d.joinDate + '</td>' +
+        '<td style="padding:8px 6px;font-weight:700;color:' + statusColor + ';">' + statusLabel + '</td>' +
+        '</tr>';
+    });
+    var distSummary = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;">' +
+      '<div style="background:#e8f5e9;border:1px solid #a5d6a7;padding:12px;text-align:center;"><div style="font-size:1.4rem;font-weight:800;color:#2e7d32;">' + active + '</div><div style="font-size:.78rem;font-weight:600;">Active</div></div>' +
+      '<div style="background:#fff3e0;border:1px solid #ffcc80;padding:12px;text-align:center;"><div style="font-size:1.4rem;font-weight:800;color:#e65100;">' + grace + '</div><div style="font-size:.78rem;font-weight:600;">Grace Period</div></div>' +
+      '<div style="background:#ffebee;border:1px solid #ef9a9a;padding:12px;text-align:center;"><div style="font-size:1.4rem;font-weight:800;color:#c62828;">' + suspended + '</div><div style="font-size:.78rem;font-weight:600;">Suspended</div></div>' +
+      '<div style="background:#f9f9f0;border:1px solid #e0e0d8;padding:12px;text-align:center;"><div style="font-size:1.4rem;font-weight:800;">' + all.length + '</div><div style="font-size:.78rem;font-weight:600;">Total</div></div>' +
+      '</div>';
+    body.innerHTML = distSummary + (rows2
+      ? '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.85rem;">' +
+        '<thead><tr style="background:#f9f9f0;"><th style="padding:8px 6px;text-align:left;">Name</th><th style="padding:8px 6px;text-align:left;">Email</th><th style="padding:8px 6px;text-align:left;">Code</th><th style="padding:8px 6px;text-align:left;">Rank</th><th style="padding:8px 6px;text-align:left;">Recruits</th><th style="padding:8px 6px;text-align:left;">Sales/Rev</th><th style="padding:8px 6px;text-align:left;">Joined</th><th style="padding:8px 6px;text-align:left;">Status</th></tr></thead>' +
+        '<tbody>' + rows2 + '</tbody></table></div>'
+      : '<p style="color:#aaa;text-align:center;padding:20px;">No distributors yet.</p>');
+  }
+
+  // Scroll to panel
+  panel.scrollIntoView({ behavior: 'smooth' });
 }
 
 </script>
