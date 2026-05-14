@@ -1134,6 +1134,7 @@ html { scroll-behavior:smooth; }
         <button class="admin-tab" onclick="switchAdmin('sales',this)">Sales Overview</button>
         <button class="admin-tab" onclick="switchAdmin('ranks',this)">Rank Overview</button>
         <button class="admin-tab" onclick="switchAdmin('maintenance',this)">📦 Product Quota (<span id="admin-maint-count">0</span>)</button>
+        <button class="admin-tab" onclick="switchAdmin('notifications',this);loadAdminNotifications();" id="admin-notif-tab">🔔 Orders <span id="admin-notif-badge" style="background:#c62828;color:#fff;border-radius:20px;padding:1px 7px;font-size:.72rem;margin-left:4px;display:none;">0</span></button>
       </div>
       <!-- DISTRIBUTORS -->
       <div class="admin-section active" id="admin-dist">
@@ -2990,6 +2991,32 @@ function paystackSuccess(paystackRef, orderRef, amount) {
   if (window._pendingPaymentType === 'maintenance')  orderTypeLabel = 'Maintenance Payment';
   if (window._pendingPaymentType === 'distshop')     orderTypeLabel = 'Distributor Stock Order';
 
+  // ── Save order to localStorage for admin notifications ──
+  var orderRecord = {
+    orderNo:      orderRef,
+    orderType:    orderTypeLabel,
+    date:         new Date().toISOString(),
+    paystackRef:  paystackRef,
+    customerName: custName,
+    customerEmail:custEmail,
+    customerPhone:custPhone,
+    pepStore:     pepStore,
+    distCode:     distCode,
+    distName:     distName,
+    distRank:     distRank,
+    distCity:     distCity,
+    product:      product,
+    qty:          qty,
+    subtotal:     sub,
+    shipping:     paxi,
+    total:        total,
+    read:         false
+  };
+  var orders = JSON.parse(localStorage.getItem('silu_orders') || '[]');
+  orders.unshift(orderRecord); // newest first
+  localStorage.setItem('silu_orders', JSON.stringify(orders));
+  updateAdminNotifBadge();
+
   // Send notification email
   sendOrderEmail({
     orderNo:       orderRef,
@@ -3405,6 +3432,9 @@ function loadAdminPanel() {
 
   // Maintenance overview
   renderAdminMaintenance();
+
+  // Update notification badge
+  if (typeof updateAdminNotifBadge === 'function') updateAdminNotifBadge();
 
   // Ranks overview
   const ranksTbody = document.getElementById('admin-ranks-tbody');
@@ -4859,6 +4889,119 @@ function adminShowDetail(type) {
   // Scroll to panel
   panel.scrollIntoView({ behavior: 'smooth' });
 }
+
+
+// ══════════════════════════════════════════════════════════
+// ADMIN ORDER NOTIFICATIONS
+// ══════════════════════════════════════════════════════════
+function getOrders() {
+  try { return JSON.parse(localStorage.getItem('silu_orders') || '[]'); } catch { return []; }
+}
+
+function updateAdminNotifBadge() {
+  var orders  = getOrders();
+  var unread  = orders.filter(function(o) { return !o.read; }).length;
+  var badge   = document.getElementById('admin-notif-badge');
+  var tab     = document.getElementById('admin-notif-tab');
+  if (!badge) return;
+  if (unread > 0) {
+    badge.textContent = unread;
+    badge.style.display = 'inline';
+    if (tab) tab.style.fontWeight = '700';
+  } else {
+    badge.style.display = 'none';
+    if (tab) tab.style.fontWeight = '';
+  }
+}
+
+function markAllOrdersRead() {
+  var orders = getOrders();
+  orders.forEach(function(o) { o.read = true; });
+  localStorage.setItem('silu_orders', JSON.stringify(orders));
+  updateAdminNotifBadge();
+  loadAdminNotifications();
+}
+
+function loadAdminNotifications() {
+  var orders  = getOrders();
+  var listEl  = document.getElementById('admin-notif-list');
+  if (!listEl) return;
+
+  // Mark all as read when admin opens the tab
+  var changed = false;
+  orders.forEach(function(o) { if (!o.read) { o.read = true; changed = true; } });
+  if (changed) {
+    localStorage.setItem('silu_orders', JSON.stringify(orders));
+    updateAdminNotifBadge();
+  }
+
+  if (orders.length === 0) {
+    listEl.innerHTML = '<p style="color:#aaa;text-align:center;padding:30px;">No orders yet.</p>';
+    return;
+  }
+
+  var html = '';
+  orders.forEach(function(o, idx) {
+    var date    = new Date(o.date);
+    var dateStr = date.toLocaleDateString('en-ZA', { day:'2-digit', month:'short', year:'numeric' });
+    var timeStr = date.toLocaleTimeString('en-ZA', { hour:'2-digit', minute:'2-digit' });
+    var typeColor = o.orderType === 'Distributor Stock Order' ? '#1565c0' :
+                    o.orderType === 'Registration Pack'       ? '#2e7d32' :
+                    o.orderType === 'Maintenance Payment'     ? '#e65100' : '#333';
+    var isDistOrder = o.distCode && o.distCode !== '';
+
+    html += '<div style="border:1px solid #e8e8e0;border-left:4px solid ' + typeColor + ';padding:18px 20px;margin-bottom:12px;background:#fff;position:relative;">' +
+
+      // Header row
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:8px;">' +
+        '<div>' +
+          '<span style="background:' + typeColor + ';color:#fff;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:3px 10px;border-radius:20px;margin-right:8px;">' + (o.orderType || 'Order') + '</span>' +
+          '<span style="font-size:.78rem;color:#888;">' + dateStr + ' at ' + timeStr + '</span>' +
+        '</div>' +
+        '<span style="font-family:monospace;font-size:.78rem;color:#555;background:#f5f5f0;padding:3px 8px;">' + (o.orderNo || 'N/A') + '</span>' +
+      '</div>' +
+
+      // Receipt grid
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #f0f0e8;">' +
+
+        // ORDER DETAILS
+        '<div style="padding:14px 16px;border-right:1px solid #f0f0e8;">' +
+          '<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:8px;">🛒 Order Details</div>' +
+          '<div style="font-size:.88rem;line-height:2;"><strong>Product:</strong> ' + (o.product || 'N/A') + '<br>' +
+          '<strong>Qty:</strong> ' + (o.qty || 1) + '<br>' +
+          '<strong>Subtotal:</strong> R' + (o.subtotal || 0) + '<br>' +
+          '<strong>Paxi Shipping:</strong> R' + (o.shipping || 0) + '<br>' +
+          '<strong style="font-size:1rem;">Total Paid: R' + (o.total || 0) + '</strong></div>' +
+        '</div>' +
+
+        // CUSTOMER / DISTRIBUTOR
+        '<div style="padding:14px 16px;">' +
+          '<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:8px;">' + (isDistOrder ? '👤 Distributor Details' : '👤 Customer Details') + '</div>' +
+          '<div style="font-size:.88rem;line-height:2;">' +
+          (isDistOrder ? '<strong>Code:</strong> ' + o.distCode + '<br><strong>Name:</strong> ' + (o.distName || o.customerName || 'N/A') + '<br><strong>Rank:</strong> ' + (o.distRank || 'N/A') + '<br><strong>City:</strong> ' + (o.distCity || 'N/A') + '<br>' : '<strong>Name:</strong> ' + (o.customerName || 'N/A') + '<br>') +
+          '<strong>Phone:</strong> ' + (o.customerPhone || 'N/A') + '<br>' +
+          '<strong>Email:</strong> ' + (o.customerEmail || 'N/A') +
+          '</div>' +
+        '</div>' +
+
+      '</div>' +
+
+      // PEP Store + Paystack ref footer
+      '<div style="background:#f9f9f0;border:1px solid #f0f0e8;border-top:none;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">' +
+        '<div style="font-size:.84rem;"><strong>📦 PEP Store Number:</strong> <span style="color:#1565c0;font-weight:700;font-size:.92rem;">' + (o.pepStore || 'Not provided') + '</span></div>' +
+        '<div style="font-size:.76rem;color:#888;">Paystack Ref: ' + (o.paystackRef || 'N/A') + '</div>' +
+      '</div>' +
+
+    '</div>';
+  });
+
+  listEl.innerHTML = html;
+}
+
+// Run badge update on page load so admin always sees unread count
+document.addEventListener('DOMContentLoaded', function() {
+  updateAdminNotifBadge();
+});
 
 </script>
 
