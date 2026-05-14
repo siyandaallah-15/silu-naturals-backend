@@ -1016,29 +1016,6 @@ html { scroll-behavior:smooth; }
               </div>
             </div>
 
-            <!-- TEST VOUCHER CARD -->
-            <div style="background:#fff;border:2px dashed #e65100;overflow:hidden;margin-bottom:20px;">
-              <div style="background:#e65100;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;">
-                <span style="color:#fff;font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:1px;">🧪 Paystack Test Item</span>
-                <span style="background:#fff;color:#e65100;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:20px;">REMOVE AFTER TESTING</span>
-              </div>
-              <div style="padding:18px;display:flex;align-items:center;gap:20px;">
-                <div style="width:64px;height:64px;background:#fff3e0;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:2rem;">🎟️</div>
-                <div style="flex:1;">
-                  <div style="font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:4px;">Paystack Test Voucher</div>
-                  <div style="font-size:1.5rem;font-weight:800;color:#e65100;">R1</div>
-                  <p style="color:#888;font-size:.8rem;margin:4px 0 12px;">Test voucher — use this to verify Paystack checkout is working. Delete after testing.</p>
-                  <div style="display:flex;align-items:center;gap:8px;">
-                    <button onclick="distShopQty('voucher',-1)" style="width:30px;height:30px;border:1.5px solid #ccc;background:#f5f5f0;font-size:1rem;cursor:pointer;font-weight:700;line-height:1;">−</button>
-                    <span id="distshop-voucher-qty" style="min-width:28px;text-align:center;font-weight:700;">1</span>
-                    <button onclick="distShopQty('voucher',1)" style="width:30px;height:30px;border:1.5px solid #ccc;background:#f5f5f0;font-size:1rem;cursor:pointer;font-weight:700;line-height:1;">+</button>
-                    <span style="font-size:.84rem;color:#333;">= <strong id="distshop-voucher-sub">R1</strong></span>
-                    <button onclick="distShopAddToCart('voucher')" style="margin-left:auto;background:#e65100;color:#fff;border:none;padding:9px 18px;font-family:'Outfit',sans-serif;font-weight:700;font-size:.82rem;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">+ Add to Cart</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <!-- CART -->
             <div id="distshop-cart" style="display:none;background:#fff;border:2px solid var(--black);padding:20px;margin-bottom:16px;">
               <div style="font-weight:700;font-size:.95rem;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #eee;">🛒 Your Order</div>
@@ -2378,7 +2355,7 @@ function portalReset() {
   localStorage.removeItem('silu_api_code');
 
   // Reset distshop cart
-  _distCart = { oil: 0, serum: 0, voucher: 0 };
+  _distCart = { oil: 0, serum: 0 };
 
   // Reset checkout state
   window._pendingPaymentType    = null;
@@ -3855,85 +3832,84 @@ function renderMaintTab(code) {
 }
 
 function openMaintPayment(code) {
-  const dist = getDistributors();
-  const d = dist[code];
+  var dist = getDistributors();
+  var d = dist[code];
   if (!d) return;
-  const ms = getMaintenanceStatus(d);
+  var ms = getMaintenanceStatus(d);
 
-  // Show a product purchase modal — distributor must buy products to stay active
-  // We open the standard order modal pre-configured for a distributor stock order
   window._pendingPaymentType = 'maintenance';
   window._pendingDistCode    = code;
-  window._pendingOrderNo     = `STOCK-${code}-${Date.now()}`;
-  window._regPackPrice       = ms.shortfall > 0 ? ms.shortfall : ms.quota;
+  window._pendingOrderNo     = 'STOCK-' + code + '-' + Date.now();
 
-  // Minimum products they need to buy = shortfall (or full quota if new period)
-  const minSpend = ms.shortfall > 0 ? ms.shortfall : ms.quota;
-  // Calculate qty needed (each product = R200)
-  const minQty = Math.ceil(minSpend / 200);
+  // Distributor price is R100 per product (not R200)
+  var DIST_UNIT_PRICE = 100;
+  var minSpend = ms.shortfall > 0 ? ms.shortfall : ms.quota;
+  var minQty   = Math.ceil(minSpend / DIST_UNIT_PRICE);
+  var sub      = minQty * DIST_UNIT_PRICE;
+  var total    = sub + 60; // Paxi R60
 
-  // Reset and pre-fill checkout step 1
-  const orderModal = document.getElementById('modal-order');
-  if (!orderModal) return;
+  window._regPackPrice          = total;
+  window._distShopOverrideTotal = { sub: sub, total: total };
 
   // Reset checkout to step 1
-  document.getElementById('checkout-step-1').style.display = 'block';
-  document.getElementById('checkout-step-2').style.display = 'none';
-  document.getElementById('checkout-step-3').style.display = 'none';
-  ['checkout-step-3ds'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
+  var s1   = document.getElementById('checkout-step-1');
+  var s2   = document.getElementById('checkout-step-2');
+  var s3   = document.getElementById('checkout-step-3');
+  var s3ds = document.getElementById('checkout-step-3ds');
+  if (s1)   s1.style.display   = 'block';
+  if (s2)   s2.style.display   = 'none';
+  if (s3)   s3.style.display   = 'none';
+  if (s3ds) s3ds.style.display = 'none';
   setStepActive(1);
 
-  // Pre-fill product as stock order
-  const prodSel = document.getElementById('order-product');
-  if (prodSel) {
-    prodSel.value = 'Hair Growth Oil';
-    prodSel.readOnly = false;
-  }
+  // Pre-fill product field
+  var prodSel = document.getElementById('order-product');
+  if (prodSel) { prodSel.value = 'Hair Growth Oil'; prodSel.readOnly = false; }
 
-  // Pre-fill minimum qty
-  const qtySel = document.getElementById('order-qty');
-  if (qtySel) {
-    // Add options up to enough to cover quota
-    qtySel.innerHTML = '';
-    for (let i = minQty; i <= minQty + 10; i++) {
-      const opt = document.createElement('option');
-      opt.value = i;
-      opt.textContent = i;
-      qtySel.appendChild(opt);
+  // Set qty options starting from minQty
+  var qtyEl = document.getElementById('order-qty');
+  if (qtyEl) {
+    qtyEl.innerHTML = '';
+    for (var q = minQty; q <= minQty + 10; q++) {
+      var opt = document.createElement('option');
+      opt.value = q;
+      opt.textContent = q;
+      qtyEl.appendChild(opt);
     }
-    qtySel.value = minQty;
-    qtySel.disabled = false;
+    qtyEl.value    = minQty;
+    qtyEl.disabled = false;
   }
 
-  // Pre-fill customer info from distributor profile
-  const nameEl  = document.getElementById('order-name');
-  const phoneEl = document.getElementById('order-phone');
-  const emailEl = document.getElementById('order-email');
-  if (nameEl)  nameEl.value  = `${d.fname} ${d.lname}`;
-  if (phoneEl) phoneEl.value = d.phone || '';
-  if (emailEl) emailEl.value = d.email || '';
+  // Update totals display
+  var subDisp = document.getElementById('order-subtotal-display');
+  var totDisp = document.getElementById('order-total-display');
+  if (subDisp) subDisp.textContent = 'R' + sub;
+  if (totDisp) totDisp.textContent = 'R' + total;
 
-  // Show PEP store (Paxi needed for product delivery)
-  const pepGroup = document.getElementById('order-pep-group');
-  if (pepGroup) pepGroup.style.display = 'block';
-
-  // Add a prominent info banner at top of checkout
-  const infoBar = document.getElementById('order-maint-info');
+  // Show info banner
+  var infoBar = document.getElementById('order-maint-info');
   if (infoBar) {
     infoBar.style.display = 'block';
-    infoBar.innerHTML = `
-      <div style="background:#fff3e0;border-left:4px solid #e65100;padding:12px 16px;font-size:.84rem;color:#333;line-height:1.6;margin-bottom:16px;">
-        <strong style="color:#e65100;">📦 Account Maintenance Order</strong><br>
-        To keep your <strong>${ms.status === 'suspended' ? 'suspended' : 'active'}</strong> account active,
-        you need to purchase at least <strong>R${minSpend}</strong> worth of products this period.<br>
-        <span style="color:#666;font-size:.78rem;">Spent this period: R${ms.totalSpent} · Quota: R${ms.quota} · Shortfall: R${ms.shortfall}</span>
-      </div>`;
+    infoBar.innerHTML =
+      '<div style="background:#fff3e0;border-left:4px solid #e65100;padding:12px 16px;font-size:.84rem;color:#333;line-height:1.6;margin-bottom:16px;">' +
+      '<strong style="color:#e65100;">📦 Account Maintenance Order</strong><br>' +
+      'You need to purchase at least <strong>R' + minSpend + '</strong> worth of products to keep your account active.<br>' +
+      '<span style="font-size:.78rem;color:#666;">Minimum ' + minQty + ' unit' + (minQty!==1?'s':'') + ' at <strong>R' + DIST_UNIT_PRICE + ' each</strong> (distributor price) + R60 Paxi = R' + total + ' total.</span>' +
+      '</div>';
   }
 
-  updateOrderTotal();
+  // Pre-fill distributor details
+  var nameEl  = document.getElementById('order-name');
+  var phoneEl = document.getElementById('order-phone');
+  var emailEl = document.getElementById('order-email');
+  if (nameEl)  nameEl.value  = (d.fname || '') + ' ' + (d.lname || '');
+  if (phoneEl) phoneEl.value = d.phone  || '';
+  if (emailEl) emailEl.value = d.email  || '';
+
+  // Show PEP store field
+  var pepGroup = document.getElementById('order-pep-group');
+  if (pepGroup) pepGroup.style.display = 'block';
+
   openModal('order');
 }
 
@@ -4292,25 +4268,21 @@ function acceptDisclaimers() {
 // ══════════════════════════════════════════════════════════
 var DIST_PRICE = 100;
 var DIST_PAXI  = 60;
-var _distCart  = { oil: 0, serum: 0, voucher: 0 };
+var _distCart  = { oil: 0, serum: 0 };
 
 function distShopQty(product, delta) {
-  var qtyId = product === 'oil'     ? 'distshop-oil-qty'     :
-              product === 'serum'   ? 'distshop-serum-qty'   : 'distshop-voucher-qty';
-  var subId = product === 'oil'     ? 'distshop-oil-sub'     :
-              product === 'serum'   ? 'distshop-serum-sub'   : 'distshop-voucher-sub';
-  var price = product === 'voucher' ? 1 : DIST_PRICE;
+  var qtyId = product === 'oil' ? 'distshop-oil-qty' : 'distshop-serum-qty';
+  var subId = product === 'oil' ? 'distshop-oil-sub' : 'distshop-serum-sub';
   var el = document.getElementById(qtyId);
   if (!el) return;
   var qty = Math.max(1, (parseInt(el.textContent) || 1) + delta);
   el.textContent = qty;
   var sub = document.getElementById(subId);
-  if (sub) sub.textContent = 'R' + (qty * price);
+  if (sub) sub.textContent = 'R' + (qty * DIST_PRICE);
 }
 
 function distShopAddToCart(product) {
-  var qtyId = product === 'oil'   ? 'distshop-oil-qty'     :
-              product === 'serum' ? 'distshop-serum-qty'   : 'distshop-voucher-qty';
+  var qtyId = product === 'oil' ? 'distshop-oil-qty' : 'distshop-serum-qty';
   var el = document.getElementById(qtyId);
   var qty = parseInt(el ? el.textContent : '1') || 1;
   _distCart[product] = (_distCart[product] || 0) + qty;
@@ -4322,37 +4294,33 @@ function distShopRenderCart() {
   var linesEl = document.getElementById('distshop-cart-lines');
   var subEl   = document.getElementById('distshop-cart-sub');
   var totEl   = document.getElementById('distshop-cart-total');
-  var o = _distCart.oil || 0, s = _distCart.serum || 0, v = _distCart.voucher || 0;
-  if (o + s + v === 0) { if (cartEl) cartEl.style.display = 'none'; return; }
+  var o = _distCart.oil || 0, s = _distCart.serum || 0;
+  if (o + s === 0) { if (cartEl) cartEl.style.display = 'none'; return; }
   if (cartEl) cartEl.style.display = 'block';
   var html = '';
   if (o > 0) html += '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0e8;font-size:.88rem;"><span>Hair Growth Oil × ' + o + '</span><span style="font-weight:600;">R' + (o * DIST_PRICE) + '</span></div>';
   if (s > 0) html += '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0e8;font-size:.88rem;"><span>Hair Growth Serum × ' + s + '</span><span style="font-weight:600;">R' + (s * DIST_PRICE) + '</span></div>';
-  if (v > 0) html += '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0e8;font-size:.88rem;"><span>🎟️ Test Voucher × ' + v + '</span><span style="font-weight:600;">R' + v + '</span></div>';
   if (linesEl) linesEl.innerHTML = html;
-  var sub = (o + s) * DIST_PRICE + v;
-  var paxi = (o + s > 0) ? DIST_PAXI : 0; // no Paxi for voucher-only orders
-  var total = sub + paxi;
+  var sub = (o + s) * DIST_PRICE;
+  var total = sub + DIST_PAXI;
   if (subEl) subEl.textContent = 'R' + sub;
   if (totEl) totEl.textContent = 'R' + total;
 }
 
 function distShopClearCart() {
-  _distCart = { oil: 0, serum: 0, voucher: 0 };
+  _distCart = { oil: 0, serum: 0 };
   distShopRenderCart();
 }
 
 function distShopCheckout() {
-  var o = _distCart.oil || 0, s = _distCart.serum || 0, v = _distCart.voucher || 0;
-  if (o + s + v === 0) { alert('Please add at least one product to your order.'); return; }
+  var o = _distCart.oil || 0, s = _distCart.serum || 0;
+  if (o + s === 0) { alert('Please add at least one product to your order.'); return; }
   var parts = [];
   if (o > 0) parts.push('Hair Growth Oil x' + o);
   if (s > 0) parts.push('Hair Growth Serum x' + s);
-  if (v > 0) parts.push('Test Voucher x' + v);
   var productStr = parts.join(' + ');
-  var sub = (o + s) * DIST_PRICE + v * 1;
-  var paxi = (o + s > 0) ? DIST_PAXI : 0; // no Paxi for voucher-only
-  var total = sub + paxi;
+  var sub   = (o + s) * DIST_PRICE;
+  var total = sub + DIST_PAXI;
   var cu   = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
   var dist = cu && typeof getDistributors === 'function' ? getDistributors()[cu.code] : null;
   window._pendingPaymentType    = 'distshop';
