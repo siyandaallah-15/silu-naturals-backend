@@ -1363,14 +1363,76 @@ html { scroll-behavior:smooth; }
 <div class="modal-overlay" id="modal-login">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('login')">×</button>
-    <h2>Distributor Login</h2>
-    <p class="sub">Access your commission dashboard and team management tools.</p>
-    <div id="login-msg" class="form-msg"></div>
-    <div class="form-group"><label>Email Address</label><input type="email" id="login-email" placeholder="your@email.com"></div>
-    <div class="form-group"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••"></div>
-    <button class="submit-btn" onclick="doLogin()">Login</button>
-    <div class="login-or">Don't have an account? <button class="link-btn" onclick="closeModal('login');showDisclaimer('Silver')">Register here</button></div>
-    <div class="login-or">Admin? <button class="link-btn" onclick="closeModal('login');openModal('admin-login')">Admin Login</button></div>
+
+    <!-- ── LOGIN VIEW ── -->
+    <div id="login-view">
+      <h2>Distributor Login</h2>
+      <p class="sub">Access your dashboard and team tools.</p>
+      <div id="login-msg" class="form-msg"></div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="login-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="submit-btn" onclick="doLogin()">Login</button>
+      <div style="text-align:center;margin-top:12px;">
+        <button class="link-btn" onclick="showForgotView()" style="color:#c62828;font-weight:600;">Forgot password?</button>
+      </div>
+      <div class="login-or">Don't have an account? <button class="link-btn" onclick="closeModal('login');showDisclaimer('Silver')">Register here</button></div>
+      <div class="login-or">Admin? <button class="link-btn" onclick="closeModal('login');openModal('admin-login')">Admin Login</button></div>
+    </div>
+
+    <!-- ── FORGOT PASSWORD VIEW ── -->
+    <div id="forgot-view" style="display:none;">
+      <h2>Reset Password</h2>
+      <p class="sub">Verify your identity to reset your password.</p>
+      <div id="forgot-msg" class="form-msg"></div>
+
+      <!-- Step 1: Choose method + enter contact -->
+      <div id="forgot-step1">
+        <div class="form-group">
+          <label>Verify using</label>
+          <div style="display:flex;gap:10px;margin-top:6px;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.88rem;font-weight:500;">
+              <input type="radio" name="forgot-method" value="email" id="forgot-method-email" checked onchange="forgotToggleMethod()"> Email
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.88rem;font-weight:500;">
+              <input type="radio" name="forgot-method" value="phone" id="forgot-method-phone" onchange="forgotToggleMethod()"> Phone Number
+            </label>
+          </div>
+        </div>
+        <div class="form-group" id="forgot-email-group">
+          <label>Email Address</label>
+          <input type="email" id="forgot-contact-email" placeholder="Your registered email">
+        </div>
+        <div class="form-group" id="forgot-phone-group" style="display:none;">
+          <label>Phone Number</label>
+          <input type="tel" id="forgot-contact-phone" placeholder="e.g. 0821234567">
+        </div>
+        <button class="submit-btn" onclick="doForgotStep1()">Verify Identity →</button>
+      </div>
+
+      <!-- Step 2: Set new password (shown after verification) -->
+      <div id="forgot-step2" style="display:none;">
+        <div class="form-group">
+          <label>New Password</label>
+          <input type="password" id="forgot-new-pass" placeholder="Minimum 8 characters">
+        </div>
+        <div class="form-group">
+          <label>Confirm New Password</label>
+          <input type="password" id="forgot-confirm-pass" placeholder="Repeat new password">
+        </div>
+        <button class="submit-btn" onclick="doForgotStep2()">Set New Password</button>
+      </div>
+
+      <div style="text-align:center;margin-top:14px;">
+        <button class="link-btn" onclick="showLoginView()">← Back to Login</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -4592,73 +4654,121 @@ function doChangeAdminCreds() {
   }, 1500);
 }
 
+
 // ══════════════════════════════════════════════════════════
-// DISTRIBUTOR FORGOT PASSWORD
+// DISTRIBUTOR FORGOT PASSWORD — inline in login modal
 // ══════════════════════════════════════════════════════════
-var _forgotVerified = false;
+var _forgotFoundCode = null; // stores the distributor code after verification
 
-function doForgotPassword() {
-  var email   = document.getElementById('forgot-email').value.trim().toLowerCase();
-  var idnum   = document.getElementById('forgot-idnum').value.trim();
-  var msg     = document.getElementById('forgot-msg');
+function showForgotView() {
+  document.getElementById('login-view').style.display   = 'none';
+  document.getElementById('forgot-view').style.display  = 'block';
+  // Reset the form
+  _forgotFoundCode = null;
+  document.getElementById('forgot-step1').style.display  = 'block';
+  document.getElementById('forgot-step2').style.display  = 'none';
+  document.getElementById('forgot-msg').className = 'form-msg';
+  document.getElementById('forgot-msg').textContent = '';
+  var e = document.getElementById('forgot-contact-email');
+  var p = document.getElementById('forgot-contact-phone');
+  if (e) e.value = '';
+  if (p) p.value = '';
+  var np = document.getElementById('forgot-new-pass');
+  var cp = document.getElementById('forgot-confirm-pass');
+  if (np) np.value = '';
+  if (cp) cp.value = '';
+  // Reset to email method
+  var emailRadio = document.getElementById('forgot-method-email');
+  if (emailRadio) emailRadio.checked = true;
+  forgotToggleMethod();
+}
 
-  if (!_forgotVerified) {
-    // Step 1 — verify identity
-    if (!email || !idnum) { showMsg(msg,'error','Please fill in all fields.'); return; }
-    if (idnum.length !== 13) { showMsg(msg,'error','Enter your full 13-digit ID number.'); return; }
+function showLoginView() {
+  document.getElementById('forgot-view').style.display = 'none';
+  document.getElementById('login-view').style.display  = 'block';
+  var lm = document.getElementById('login-msg');
+  if (lm) { lm.textContent = ''; lm.className = 'form-msg'; }
+}
 
-    var dists = getDistributors();
-    var found = Object.values(dists).find(function(d) {
-      var emailMatch = (d.email || '').toLowerCase().trim() === email;
-      // Registration stores ID as 'idnum', some profiles use 'id_number'
-      var idMatch = (d.idnum || d.id_number || '') === idnum;
-      return emailMatch && idMatch;
-    });
-
-    if (!found) {
-      showMsg(msg,'error','No account found with that email and ID number. Please check and try again.');
-      return;
-    }
-
-    // Identity verified — show new password fields
-    _forgotVerified = true;
-    document.getElementById('forgot-newpass-group').style.display = 'block';
-    document.getElementById('forgot-confirmpass-group').style.display = 'block';
-    document.getElementById('forgot-btn').textContent = 'Set New Password';
-    showMsg(msg,'success','Identity verified! Enter your new password below.');
-
+function forgotToggleMethod() {
+  var method = document.querySelector('input[name="forgot-method"]:checked');
+  var emailG = document.getElementById('forgot-email-group');
+  var phoneG = document.getElementById('forgot-phone-group');
+  if (!method) return;
+  if (method.value === 'email') {
+    emailG.style.display = 'block';
+    phoneG.style.display = 'none';
   } else {
-    // Step 2 — set new password
-    var newPass     = document.getElementById('forgot-new-pass').value;
-    var confirmPass = document.getElementById('forgot-confirm-pass').value;
-
-    if (newPass.length < 8) { showMsg(msg,'error','Password must be at least 8 characters.'); return; }
-    if (newPass !== confirmPass) { showMsg(msg,'error','Passwords do not match.'); return; }
-
-    var email2 = document.getElementById('forgot-email').value.trim().toLowerCase();
-    var dists  = getDistributors();
-    var found2 = Object.values(dists).find(function(d) { return d.email === email2; });
-
-    if (found2) {
-      dists[found2.code].password      = newPass;
-      dists[found2.code].password_hash = newPass; // ensure both fields updated
-      saveDistributors(dists);
-      showMsg(msg,'success','Password reset successfully! You can now log in with your new password.');
-      setTimeout(function() {
-        closeModal('forgot-password');
-        _forgotVerified = false;
-        // Reset form
-        ['forgot-email','forgot-idnum','forgot-new-pass','forgot-confirm-pass'].forEach(function(id) {
-          var el = document.getElementById(id); if (el) el.value = '';
-        });
-        document.getElementById('forgot-newpass-group').style.display = 'none';
-        document.getElementById('forgot-confirmpass-group').style.display = 'none';
-        document.getElementById('forgot-btn').textContent = 'Verify Identity';
-        openModal('login');
-      }, 1500);
-    }
+    emailG.style.display = 'none';
+    phoneG.style.display = 'block';
   }
 }
+
+function doForgotStep1() {
+  var msg    = document.getElementById('forgot-msg');
+  var method = document.querySelector('input[name="forgot-method"]:checked');
+  if (!method) return;
+
+  var dists  = getDistributors();
+  var found  = null;
+
+  if (method.value === 'email') {
+    var email = (document.getElementById('forgot-contact-email').value || '').trim().toLowerCase();
+    if (!email) { showMsg(msg, 'error', 'Please enter your email address.'); return; }
+    found = Object.values(dists).find(function(d) {
+      return (d.email || '').toLowerCase().trim() === email;
+    });
+    if (!found) { showMsg(msg, 'error', 'No account found with that email address.'); return; }
+
+  } else {
+    var phone = (document.getElementById('forgot-contact-phone').value || '').trim().replace(/\s+/g,'');
+    if (!phone) { showMsg(msg, 'error', 'Please enter your phone number.'); return; }
+    // Normalise: strip spaces, leading 0 → 27 comparison
+    found = Object.values(dists).find(function(d) {
+      var stored = (d.phone || '').replace(/\s+/g,'');
+      return stored === phone ||
+             stored.replace(/^0/,'27') === phone ||
+             phone.replace(/^0/,'27') === stored ||
+             phone.replace(/^27/,'0') === stored;
+    });
+    if (!found) { showMsg(msg, 'error', 'No account found with that phone number.'); return; }
+  }
+
+  // Found — store code and move to step 2
+  _forgotFoundCode = found.code;
+  showMsg(msg, 'success', 'Identity verified! Set your new password below.');
+  document.getElementById('forgot-step1').style.display = 'none';
+  document.getElementById('forgot-step2').style.display = 'block';
+}
+
+function doForgotStep2() {
+  var msg     = document.getElementById('forgot-msg');
+  var newPass = (document.getElementById('forgot-new-pass').value    || '').trim();
+  var confirm = (document.getElementById('forgot-confirm-pass').value || '').trim();
+
+  if (newPass.length < 8)    { showMsg(msg, 'error', 'Password must be at least 8 characters.'); return; }
+  if (newPass !== confirm)   { showMsg(msg, 'error', 'Passwords do not match.'); return; }
+  if (!_forgotFoundCode)     { showMsg(msg, 'error', 'Session expired. Please start again.'); showForgotView(); return; }
+
+  var dists = getDistributors();
+  if (!dists[_forgotFoundCode]) { showMsg(msg, 'error', 'Account not found. Please try again.'); return; }
+
+  // Save new password in both fields for full compatibility
+  dists[_forgotFoundCode].password      = newPass;
+  dists[_forgotFoundCode].password_hash = newPass;
+  saveDistributors(dists);
+
+  showMsg(msg, 'success', 'Password updated! You can now log in.');
+  _forgotFoundCode = null;
+
+  setTimeout(function() {
+    showLoginView();
+    // Pre-fill email in login form for convenience
+    var el = document.getElementById('login-email');
+    if (el) el.value = dists ? (dists[_forgotFoundCode] ? dists[_forgotFoundCode].email || '' : '') : '';
+  }, 1500);
+}
+
 
 // ══════════════════════════════════════════════════════════
 // ADMIN FORGOT PASSWORD (uses master reset code)
@@ -5219,33 +5329,6 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
-<!-- DISTRIBUTOR FORGOT PASSWORD MODAL -->
-<div class="modal-overlay" id="modal-forgot-password">
-  <div class="modal" style="max-width:440px;">
-    <button class="modal-close" onclick="closeModal('forgot-password')">×</button>
-    <h2>Reset Password</h2>
-    <p class="sub">Enter your email and ID number to reset your password.</p>
-    <div id="forgot-msg" class="form-msg"></div>
-    <div class="form-group">
-      <label>Email Address</label>
-      <input type="email" id="forgot-email" placeholder="Your registered email">
-    </div>
-    <div class="form-group">
-      <label>ID Number</label>
-      <input type="text" id="forgot-idnum" placeholder="Your 13-digit SA ID number" maxlength="13">
-      <small style="color:#888;font-size:.78rem;">This is the ID number you registered with.</small>
-    </div>
-    <div class="form-group" id="forgot-newpass-group" style="display:none;">
-      <label>New Password</label>
-      <input type="password" id="forgot-new-pass" placeholder="Min 8 characters">
-    </div>
-    <div class="form-group" id="forgot-confirmpass-group" style="display:none;">
-      <label>Confirm New Password</label>
-      <input type="password" id="forgot-confirm-pass" placeholder="Repeat new password">
-    </div>
-    <button class="submit-btn" id="forgot-btn" onclick="doForgotPassword()">Verify Identity</button>
-  </div>
-</div>
 
 <!-- ADMIN FORGOT PASSWORD MODAL -->
 <div class="modal-overlay" id="modal-admin-forgot">
