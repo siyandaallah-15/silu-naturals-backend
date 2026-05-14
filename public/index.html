@@ -2029,106 +2029,43 @@ function getBaseUrl() {
 
 // ── Seed demo distributor so system isn't empty ──────────────
 function seedDemo() {
-  const dist = getDistributors();
+  var dist = getDistributors();
+
+  // ── THANDI001 — demo account ─────────────────────────
   if (!dist['THANDI001']) {
     dist['THANDI001'] = {
       code:'THANDI001', fname:'Thandi', lname:'Nkosi',
       email:'thandi@demo.com', phone:'082 111 2222', city:'Port Elizabeth',
       pack:'Gold', password:'demo1234', joinDate:'2026-01-15',
       sponsorCode: null,
+      recruits:['SIYANDA1'],
       sales:[
         {date:'2026-03-24',product:'Hair Growth Oil',qty:2,customer:'Nomsa Dlamini'},
         {date:'2026-03-22',product:'Hair Growth Serum',qty:1,customer:'Zanele Khumalo'},
         {date:'2026-03-20',product:'Hair Growth Oil',qty:3,customer:'Busi Nxumalo'},
-        {date:'2026-03-18',product:'Hair Growth Serum',qty:2,customer:'Ayanda Cele'},
-        {date:'2026-03-15',product:'Hair Growth Oil',qty:4,customer:'Sipho Mokoena'},
       ],
-      payouts:[
-        {date:'2026-02-28',amount:500,bank:'FNB',acc:'62012345678',type:'Savings',status:'Approved'},
-      ],
-      recruits:['SIPHO001','LERATO01','AYANDA01']
+      payouts:[],
+      rankHistory:[{rankName:'Member',achievedDate:'2026-01-15'}],
+      status:'active'
     };
-    dist['SIPHO001'] = {
-      code:'SIPHO001', fname:'Sipho', lname:'Dube',
-      email:'sipho@demo.com', phone:'083 222 3333', city:'Port Elizabeth',
-      pack:'Silver', password:'demo1234', joinDate:'2026-02-10',
-      sponsorCode:'THANDI001',
-      sales:[
-        {date:'2026-03-24',product:'Hair Growth Oil',qty:1,customer:'Portia Sithole'},
-        {date:'2026-03-20',product:'Hair Growth Serum',qty:2,customer:'Lebo Moyo'},
-        {date:'2026-03-16',product:'Hair Growth Oil',qty:1,customer:'Zanele Dlamini'},
-      ],
-      payouts:[], recruits:['ZANELE01','MPHO0001']
-    };
-    dist['LERATO01'] = {
-      code:'LERATO01', fname:'Lerato', lname:'Khumalo',
-      email:'lerato@demo.com', phone:'072 333 4444', city:'Johannesburg',
-      pack:'Platinum', password:'demo1234', joinDate:'2026-02-14',
-      sponsorCode:'THANDI001',
-      sales:[
-        {date:'2026-03-23',product:'Hair Growth Serum',qty:1,customer:'Ntombi Dube'},
-        {date:'2026-03-19',product:'Hair Growth Oil',qty:2,customer:'Faith Khumalo'},
-      ],
-      payouts:[], recruits:['THABO001','NOMSA001']
-    };
-    dist['AYANDA01'] = {
-      code:'AYANDA01', fname:'Ayanda', lname:'Cele',
-      email:'ayanda@demo.com', phone:'071 444 5555', city:'Durban',
-      pack:'Silver', password:'demo1234', joinDate:'2026-03-01',
-      sponsorCode:'THANDI001',
-      sales:[
-        {date:'2026-03-21',product:'Hair Growth Oil',qty:1,customer:'Mama Cele'},
-      ],
-      payouts:[], recruits:[]
-    };
-    dist['ZANELE01'] = {
-      code:'ZANELE01', fname:'Zanele', lname:'Mokoena',
-      email:'zanele@demo.com', phone:'082 555 6666', city:'Port Elizabeth',
-      pack:'Silver', password:'demo1234', joinDate:'2026-02-20',
-      sponsorCode:'SIPHO001',
-      sales:[
-        {date:'2026-03-20',product:'Hair Growth Serum',qty:1,customer:'Sis Zanele'},
-        {date:'2026-03-15',product:'Hair Growth Oil',qty:1,customer:'Bab Xhosa'},
-      ],
-      payouts:[], recruits:['BUSI0001']
-    };
-    dist['MPHO0001'] = {
-      code:'MPHO0001', fname:'Mpho', lname:'Sithole',
-      email:'mpho@demo.com', phone:'073 666 7777', city:'Pretoria',
-      pack:'Silver', password:'demo1234', joinDate:'2026-02-25',
-      sponsorCode:'SIPHO001',
-      sales:[{date:'2026-03-18',product:'Hair Growth Oil',qty:1,customer:'Friend Mpho'}],
-      payouts:[], recruits:[]
-    };
-    dist['THABO001'] = {
-      code:'THABO001', fname:'Thabo', lname:'Mokoena',
-      email:'thabo@demo.com', phone:'060 777 8888', city:'Cape Town',
-      pack:'Gold', password:'demo1234', joinDate:'2026-03-05',
-      sponsorCode:'LERATO01',
-      sales:[
-        {date:'2026-03-22',product:'Hair Growth Oil',qty:2,customer:'Sis Thabo'},
-        {date:'2026-03-17',product:'Hair Growth Serum',qty:1,customer:'Bro Mokoena'},
-      ],
-      payouts:[], recruits:[]
-    };
-    dist['NOMSA001'] = {
-      code:'NOMSA001', fname:'Nomsa', lname:'Williams',
-      email:'nomsa@demo.com', phone:'084 888 9999', city:'East London',
-      pack:'Silver', password:'demo1234', joinDate:'2026-03-08',
-      sponsorCode:'LERATO01',
-      sales:[{date:'2026-03-20',product:'Hair Growth Serum',qty:1,customer:'Nomsa friend'}],
-      payouts:[], recruits:[]
-    };
-    dist['BUSI0001'] = {
-      code:'BUSI0001', fname:'Busi', lname:'Nxumalo',
-      email:'busi@demo.com', phone:'076 999 0000', city:'Port Elizabeth',
-      pack:'Silver', password:'demo1234', joinDate:'2026-03-10',
-      sponsorCode:'ZANELE01',
-      sales:[{date:'2026-03-15',product:'Hair Growth Oil',qty:1,customer:'Client Busi'}],
-      payouts:[], recruits:[]
-    };
-    saveDistributors(dist);
   }
+
+  // ── SIYANDA1 — Siyanda Alla (works on all devices) ───
+  if (!dist['SIYANDA1']) {
+    dist['SIYANDA1'] = {
+      code:'SIYANDA1', fname:'Siyanda', lname:'Alla',
+      email:'siyandaallah@gmail.com', phone:'069 743 7904', city:'Port Elizabeth',
+      pack:'Gold', password:'Silu2026!', joinDate:'2026-01-01',
+      sponsorCode:'THANDI001',
+      recruits:[],
+      sales:[],
+      payouts:[],
+      rankHistory:[{rankName:'Member',achievedDate:'2026-01-01'}],
+      status:'active'
+    };
+  }
+
+  saveDistributors(dist);
 }
 
 // ── Compute stats for a distributor ─────────────────────────
@@ -2204,6 +2141,7 @@ function computeStats(code) {
 // ── On page load: check URL for ?ref= and pre-fill form ─────
 window.addEventListener('DOMContentLoaded', () => {
   seedDemo();
+  cleanOldDemoProfiles();
   const params = new URLSearchParams(window.location.search);
   const ref = params.get('ref');
   if (ref) {
@@ -4787,6 +4725,18 @@ function sendOrderEmail(orderDetails) {
     .catch(function(err) {
       console.warn('Email failed:', err);
     });
+}
+
+
+// ── CLEAN UP OLD DEMO PROFILES (runs once on page load) ──
+function cleanOldDemoProfiles() {
+  var dist = getDistributors();
+  var toRemove = ['SIPHO001','LERATO01','AYANDA01','ZANELE01','MPHO0001','THABO001','NOMSA001','BUSI0001'];
+  var changed = false;
+  toRemove.forEach(function(code) {
+    if (dist[code]) { delete dist[code]; changed = true; }
+  });
+  if (changed) saveDistributors(dist);
 }
 
 </script>
