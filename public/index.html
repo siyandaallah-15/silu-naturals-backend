@@ -2034,6 +2034,7 @@ function seedDemo() {
     dist['THANDI001'] = {
       code:'THANDI001', fname:'Thandi', lname:'Nkosi',
       email:'thandi@demo.com', phone:'082 111 2222', city:'Port Elizabeth',
+      idnum:'8501015009087', id_number:'8501015009087',
       pack:'Gold', password:'demo1234', joinDate:'2026-01-15',
       sponsorCode: null,
       recruits:['SIYANDA1'],
@@ -2053,6 +2054,7 @@ function seedDemo() {
     dist['SIYANDA1'] = {
       code:'SIYANDA1', fname:'Siyanda', lname:'Alla',
       email:'siyandaallah@gmail.com', phone:'069 743 7904', city:'Port Elizabeth',
+      idnum:'', id_number:'',
       pack:'Gold', password:'Silu2026!', joinDate:'2026-05-14',
       sponsorCode: null,
       recruits:[],
@@ -2262,10 +2264,12 @@ function doRegister() {
   });
 
   const newDist = {
-    code, fname, lname, email, phone, idnum, city,
+    code, fname, lname, email, phone,
+    idnum: idnum, id_number: idnum,   // store both for compatibility
+    city,
     rankHistory: [],   // tracks rank changes with dates for 31-day rule
     disclaimerDate: new Date().toLocaleDateString('en-ZA'),
-    pack: packLabel, password: pass,
+    pack: packLabel, password: pass, password_hash: pass,
     joinDate: new Date().toISOString().split('T')[0],
     sponsorCode: refCode || null,
     sales: [], payouts: [], recruits: []
@@ -2319,9 +2323,9 @@ function doLogin() {
   var dists = getDistributors();
   var found = null;
   Object.values(dists).forEach(function(d) {
-    if (d.email === email && (d.password === pass || d.password_hash === pass)) {
-      found = d;
-    }
+    var emailMatch = (d.email || '').toLowerCase().trim() === email;
+    var passMatch  = d.password === pass || d.password_hash === pass;
+    if (emailMatch && passMatch) found = d;
   });
 
   if (found) {
@@ -4575,11 +4579,14 @@ function doForgotPassword() {
 
     var dists = getDistributors();
     var found = Object.values(dists).find(function(d) {
-      return d.email === email && d.id_number === idnum;
+      var emailMatch = (d.email || '').toLowerCase().trim() === email;
+      // Registration stores ID as 'idnum', some profiles use 'id_number'
+      var idMatch = (d.idnum || d.id_number || '') === idnum;
+      return emailMatch && idMatch;
     });
 
     if (!found) {
-      showMsg(msg,'error','No account found with that email and ID number combination.');
+      showMsg(msg,'error','No account found with that email and ID number. Please check and try again.');
       return;
     }
 
@@ -4603,7 +4610,8 @@ function doForgotPassword() {
     var found2 = Object.values(dists).find(function(d) { return d.email === email2; });
 
     if (found2) {
-      dists[found2.code].password = newPass;
+      dists[found2.code].password      = newPass;
+      dists[found2.code].password_hash = newPass; // ensure both fields updated
       saveDistributors(dists);
       showMsg(msg,'success','Password reset successfully! You can now log in with your new password.');
       setTimeout(function() {
@@ -5082,6 +5090,7 @@ function adminShowDetail(type) {
     <div class="form-group">
       <label>ID Number</label>
       <input type="text" id="forgot-idnum" placeholder="Your 13-digit SA ID number" maxlength="13">
+      <small style="color:#888;font-size:.78rem;">This is the ID number you registered with.</small>
     </div>
     <div class="form-group" id="forgot-newpass-group" style="display:none;">
       <label>New Password</label>
